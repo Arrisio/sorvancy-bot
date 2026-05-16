@@ -1,0 +1,25 @@
+Extract facts from user message. Return ONLY valid JSON, no prose, no markdown.
+Schema:
+{
+  "name": string | null,
+  "children": [
+    {
+      "name": string | null, <- First name and middle name
+      "last_name": string | null, <- last name
+      "birth_date": string | null,
+      "gender": "male" | "female" | null
+    }
+  ]
+}
+
+Rules:
+- birth_date format: YYYY-MM-DD
+- gender inferred from name or pronouns
+- missing fields: null
+- no children: "children": []
+- do not invent data
+
+Message:
+"""
+{message}
+"""

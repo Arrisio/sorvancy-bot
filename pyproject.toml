@@ -1,0 +1,12 @@
+[project]
+name = "max-bot"
+version = "0.1.0"
+description = "Max messenger bot for Соrванцы children's clothing store"
+requires-python = ">=3.11"
+dependencies = [
+    "maxapi>=0.9.4",
+    "asyncpg>=0.29",
+    "sqlalchemy[asyncio]>=2.0",
+    "python-dotenv>=1.0",
+    "qrcode[pil]>=7.0",
+]
