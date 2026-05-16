@@ -13,5 +13,6 @@
 | Phase 1 | Minimal registration: Customer row created with max_user_id + discount_percent only. |
 | Phase 2 | Survey: enriches Customer with first_name, birthdate; creates Child rows. |
 | Cashier | Store staff who reads discount QR or text card from customer's phone screen. |
+| Coupon | Single-use monetary benefit issued to a Customer. Covers part of purchase up to `value` rubles and `max_payment_pct`% of total. Expires at `valid_until`. |
 | registered_keyboard | Button set for registered users: "Показать код на скидку" + "Мой профиль". |
 | unregistered_keyboard | Button set for new users: "Зарегистрироваться и получить скидку". |
