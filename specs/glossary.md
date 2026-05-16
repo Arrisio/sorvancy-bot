@@ -16,3 +16,6 @@
 | Coupon | Single-use monetary benefit issued to a Customer. Covers part of purchase up to `value` rubles and `max_payment_pct`% of total. Expires at `valid_until`. |
 | registered_keyboard | Button set for registered users: "Показать код на скидку" + "Мой профиль". |
 | unregistered_keyboard | Button set for new users: "Зарегистрироваться и получить скидку". |
+| Staff | Store personnel account in the bot — either seller or owner. Created at DB seed (owner) or via contact card forwarding (sellers). |
+| Owner | Staff member with `is_owner = true`. Single business owner with elevated permissions. Seeded at DB init. |
+| Contact card | Max messenger message type carrying user identity fields (max_user_id, phone, first_name, last_name, username). Used for seller registration flow. |
