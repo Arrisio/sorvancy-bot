@@ -1,15 +1,49 @@
-Implement code changes for the last N spec commits. N = $ARGUMENTS (default: 1 if empty).
+Implement code changes for spec commits identified by `$ARGUMENTS`.
+
+`$ARGUMENTS` can be:
+- empty → last 1 spec commit
+- integer N → last N spec commits
+- one or more commit hashes (short or full, space-separated)
+- one or more commit message substrings (space-separated; each treated as independent search term)
 
 ## Your workflow
 
-### Step 1 — Parse N
-If `$ARGUMENTS` is empty or blank, use N=1. Otherwise parse N from `$ARGUMENTS`.
+### Step 1 — Parse arguments
+
+Examine `$ARGUMENTS`:
+
+| Case | Detection | Action |
+|---|---|---|
+| Empty / blank | — | mode=last-n, N=1 |
+| Single integer | token matches `^\d+$` | mode=last-n, N=that integer |
+| Hash(es) | every token matches `^[0-9a-f]{7,40}$` | mode=by-hash, collect hashes |
+| Message pattern(s) | anything else | mode=by-message, collect tokens as patterns |
+
+Mixed hashes + messages in one call are not supported — treat as mode=by-message in that case.
 
 ### Step 2 — Find spec commits
-Run: `git log --oneline -- specs/`
-Take the first N results. These are the candidate commits (most recent first).
 
-If fewer than N commits touch `specs/`, process what exists and note the shortfall.
+**mode=last-n:**
+```
+git log --oneline -- specs/
+```
+Take the first N results (most recent first). Note shortfall if fewer than N exist.
+
+**mode=by-hash:**
+For each provided hash run:
+```
+git show --no-patch --format="%h %s" <hash>
+```
+Verify the hash exists. Collect as candidate commits in the order provided.
+
+**mode=by-message:**
+For each pattern run:
+```
+git log --oneline --grep="<pattern>" -- specs/
+```
+Collect all matching commits. Deduplicate by hash. Preserve chronological order (most recent first).
+
+If no commits found for a pattern, report it and continue with remaining patterns.
 
 ### Step 3 — Validate each commit (STOP ON CODE CHANGES)
 
