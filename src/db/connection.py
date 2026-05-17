@@ -15,7 +15,7 @@ def _db_url() -> str:
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
-        _engine = create_async_engine(_db_url(), pool_size=10, max_overflow=0)
+        _engine = create_async_engine(_db_url(), pool_size=10, max_overflow=0, pool_pre_ping=True)
     return _engine
 
 

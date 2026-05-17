@@ -59,4 +59,16 @@ class RoutingMiddleware(BaseMiddleware):
         else:
             data["route"] = "registration"
 
-        return await handler(event_object, data)
+        try:
+            return await handler(event_object, data)
+        except Exception:
+            logger.exception("Unhandled exception in handler for user_id=%s", user_id)
+            try:
+                bot = getattr(event_object, "bot", None)
+                if bot and user_id:
+                    await bot.send_message(
+                        user_id=user_id,
+                        text="Произошла ошибка. Попробуйте ещё раз или обратитесь в магазин.",
+                    )
+            except Exception:
+                logger.debug("Could not send error notification to user_id=%s", user_id)

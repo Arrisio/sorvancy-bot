@@ -220,11 +220,16 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         if val < 0 or val > 30:
             await bot.send_message(user_id=user_id, text="Введите число от 0 до 30.")
             return
-        async with get_session_factory()() as session:
-            async with session.begin():
-                old = await customer_model.get_by_id(session, customer_id)
-                old_pct = old.discount_percent if old else "?"
-                await customer_model.set_discount(session, customer_id, val)
+        try:
+            async with get_session_factory()() as session:
+                async with session.begin():
+                    old = await customer_model.get_by_id(session, customer_id)
+                    old_pct = old.discount_percent if old else "?"
+                    await customer_model.set_discount(session, customer_id, val)
+        except Exception:
+            logger.exception("Discount update failed for customer_id=%s", customer_id)
+            await bot.send_message(user_id=user_id, text="Ошибка при изменении скидки. Попробуйте ещё раз.")
+            return
         await bot.send_message(user_id=user_id, text=f"Скидка изменена: {old_pct}% → {val}%")
         if customer_max_id:
             try:
