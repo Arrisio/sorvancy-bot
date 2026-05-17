@@ -12,7 +12,7 @@ Seller marks a customer's coupon as used at point of sale.
 Seller clicks coupon button on customer profile message (scenario 06).
 
 ## Preconditions
-- Seller received customer profile message with at least one active coupon
+- Seller received customer profile message (via scenario 06 or scenario 10) with at least one active coupon
 - Target coupon: `status = active` AND `valid_until > now()`
 
 ## Main flow

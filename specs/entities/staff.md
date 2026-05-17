@@ -14,6 +14,7 @@ Bot operator account for store personnel — either seller or business owner —
 | first_name | varchar(255) | nullable | From contact card |
 | last_name | varchar(255) | nullable | From contact card |
 | is_owner | boolean | not null, default false | True = business owner with elevated permissions |
+| customer_mode | boolean | not null, default false | When true: bot routes this user through customer branch, ignoring Staff status. For testing/debug only. |
 | created_at | timestamptz | not null, default now() | Registration time |
 
 ## Invariants
@@ -21,6 +22,8 @@ Bot operator account for store personnel — either seller or business owner —
 - Exactly one Staff row with `is_owner = true` at all times
 - First Staff row seeded at DB init; that row has `is_owner = true`
 - `max_user_id` unique — one Staff account per Max user
+- `customer_mode` toggled only by superuser via `/mode` command (scenario 14); not settable by sellers themselves
+- `customer_mode = true` affects routing only; Staff permissions (`is_owner`) remain unchanged
 
 ## Relations
 

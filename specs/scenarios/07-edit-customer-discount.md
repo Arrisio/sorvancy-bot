@@ -12,7 +12,7 @@ Seller updates a customer's discount percentage and both parties are notified.
 Seller clicks "Изменить % скидки" button on customer profile message (scenario 06).
 
 ## Preconditions
-- Seller received customer profile message (scenario 06 complete)
+- Seller received customer profile message (scenario 06 or scenario 10 complete)
 - Seller is registered in Staff table
 
 ## Main flow
