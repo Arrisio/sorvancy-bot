@@ -16,6 +16,9 @@ from src.db.orm import Staff, Customer, Child
 
 logger = logging.getLogger(__name__)
 
+_CUSTOMER_COLS = list(range(1, 10)) + [13, 14]
+_COUPON_COL = 13
+
 
 async def register_excel_handlers(dp):
 
@@ -55,7 +58,7 @@ async def _generate_excel() -> bytes:
         raise RuntimeError("openpyxl not installed; run: pip install openpyxl")
 
     from openpyxl import Workbook
-    from openpyxl.styles import Font
+    from openpyxl.styles import Font, Alignment
 
     async with get_session_factory()() as session:
         customers = await customer_model.get_all(session)
@@ -74,11 +77,13 @@ async def _generate_excel() -> bytes:
         "Скидка, %", "Дата регистрации", "Отказ от рассылок",
         "Последняя активность",
         "Имя ребёнка", "Пол", "Дата рождения ребёнка",
-        "Активные купоны",
+        "Активные купоны", "Заполнена анкета",
     ]
     ws.append(headers)
     for cell in ws[1]:
         cell.font = Font(bold=True)
+
+    row_idx = 2
 
     for cust in customers:
         children = all_children.get(cust.id, [])
@@ -93,6 +98,7 @@ async def _generate_excel() -> bytes:
         bd_str = cust.birthdate.strftime("%d.%m.%Y") if cust.birthdate else ""
         reg_str = cust.registered_at.strftime("%d.%m.%Y") if cust.registered_at else ""
         touch_str = cust.last_touch.strftime("%d.%m.%Y %H:%M") if cust.last_touch else ""
+        survey_str = "Да" if cust.survey_completed else "Нет"
 
         base_row = [
             cust.id,
@@ -106,14 +112,47 @@ async def _generate_excel() -> bytes:
             touch_str,
         ]
 
+        start_row = row_idx
+
         if not children:
-            ws.append(base_row + ["", "", "", coupon_cell])
+            ws.append(base_row + ["", "", "", coupon_cell, survey_str])
+            row_idx += 1
         else:
             for i, ch in enumerate(children):
                 ch_bd = ch.birthdate.strftime("%d.%m.%Y") if ch.birthdate else ""
                 gender_str = "Мальчик" if ch.gender == "male" else "Девочка"
-                row = base_row + [ch.name, gender_str, ch_bd, coupon_cell if i == 0 else ""]
+                if i == 0:
+                    row = base_row + [ch.name, gender_str, ch_bd, coupon_cell, survey_str]
+                else:
+                    row = [""] * 9 + [ch.name, gender_str, ch_bd, "", ""]
                 ws.append(row)
+                row_idx += 1
+
+        end_row = row_idx - 1
+
+        if end_row > start_row:
+            for col in _CUSTOMER_COLS:
+                ws.merge_cells(
+                    start_row=start_row, start_column=col,
+                    end_row=end_row, end_column=col,
+                )
+                ws.cell(start_row, col).alignment = Alignment(
+                    vertical="center",
+                    wrap_text=(col == _COUPON_COL),
+                )
+        else:
+            ws.cell(start_row, _COUPON_COL).alignment = Alignment(wrap_text=True)
+
+    col_widths: dict[int, int] = {}
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value is None:
+                continue
+            max_line = max((len(line) for line in str(cell.value).split("\n")), default=0)
+            col_widths[cell.column] = max(col_widths.get(cell.column, 0), max_line)
+
+    for col_idx, width in col_widths.items():
+        ws.column_dimensions[ws.cell(1, col_idx).column_letter].width = width + 2
 
     buf = io.BytesIO()
     wb.save(buf)
