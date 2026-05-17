@@ -22,7 +22,7 @@ Superuser clicks «Запустить рассылку» button.
 5. Superuser sends recipient list — either:
    - Text message containing Customer IDs
    - Excel or CSV file (same format as Excel export scenario; rows hidden by filter treated as excluded)
-6. Bot resolves recipient list; excludes customers with `opt_out_marketing = true`
+6. Bot resolves recipient list: deduplicates customer IDs in-memory (owner may submit same ID twice); excludes customers with `opt_out_marketing = true`
 7. Bot sends: «Создана рассылка на {количество} получателей. Когда её начать?» + buttons [Начать сейчас] [Отмена]
 8. Superuser responds with start time choice:
    - Clicks [Начать сейчас] → `scheduled_at = now()`; Broadcast status → `running`; delivery begins immediately

@@ -22,7 +22,11 @@ Delivery phase of scenario 11 (Create and Schedule Broadcast).
 ### Completion notification
 - After all recipients processed: bot notifies the creating superuser: «Рассылка {id} завершена. Отправлено успешно: {sent_count}. Не удалось доставить: {failed_count}.»
 
+### Scheduler
+- Delivery triggered by hourly scheduled job polling for Broadcasts where status=`pending` AND `scheduled_at ≤ now()`
+- Immediate broadcasts (status=`running` at creation): picked up on next job tick (≤1 hour delay) or triggered inline — developer chooses simpler option
+- See scenario 18 for full delivery flow
+
 ## Open questions
 - [ ] Retry count limit: max retries per recipient before marking as permanently failed?
 - [ ] Error classification: which Max API error codes count as permanent vs transient?
-- [ ] Scheduled broadcasts: what mechanism triggers delivery at `scheduled_at` — cron job, APScheduler, or other?

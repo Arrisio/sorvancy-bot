@@ -13,6 +13,7 @@ Kid belonging to Customer. Collected during survey. Drives birthday and school-y
 | gender | varchar(10) | not null | 'male' or 'female'; DB CHECK constraint; required, no skip |
 | birthdate | date | nullable | Optional; null if skipped; used for birthday campaign targeting |
 | created_at | timestamptz | not null, default now() | |
+| birthday_reminded_year | int | nullable | Year of most recent birthday reminder sent for this child; null = never sent; compared against year_of(target_date) for dedup |
 
 ## Invariants
 
@@ -26,11 +27,11 @@ Kid belonging to Customer. Collected during survey. Drives birthday and school-y
 
 - belongs_to: Customer
 
-## Future use (newsletters — not yet implemented)
+## Scheduled campaigns
 
-- birthdate → birthday campaign (send day before child's birthday)
-- birthdate → school year inference for back-to-school campaigns (August)
-- gender → gender-targeted product promotions
+- birthdate → birthday reminder 3 days before (scenario 19); coupon 300 RUB, valid 7 days; dedup via `birthday_reminded_year`
+- birthdate → school year inference for back-to-school campaigns (August) — not yet implemented
+- gender → gender-targeted product promotions — not yet implemented
 
 ## Open questions
 
