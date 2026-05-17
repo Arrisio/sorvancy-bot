@@ -18,6 +18,7 @@
 | unregistered_keyboard | Button set for new users: "Зарегистрироваться и получить скидку". |
 | Staff | Store personnel account in the bot — either seller or owner. Created at DB seed (owner) or via contact card forwarding (sellers). |
 | Owner | Staff member with `is_owner = true`. Single business owner with elevated permissions. Seeded at DB init. |
+| Суперпользователь | Project synonym for Owner. Staff member with `is_owner = true`. |
 | Contact card | Max messenger message type carrying user identity fields (max_user_id, phone, first_name, last_name, username). Used for seller registration flow. |
 | Deeplink | Max Messenger URL embedded in customer's QR code. When followed by seller, triggers "show customer profile" command in bot. Synonymous with Ссылка in project terminology. |
 | Ссылка | Project term for deeplink. See Deeplink. |
