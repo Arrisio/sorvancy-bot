@@ -1,31 +1,36 @@
-from db.models import Document,MoneyTransfer
-from  db.models.tmp_table import TmpTable, TmpTable2
-from db.base import engine
-from db.models._base import Base
-from db.base import db_session
-from db.helpers import register_base_modify_info_trigger
+import asyncio
+from sqlalchemy import text
+
+from src.db.connection import get_engine, get_session_factory
+from src.db.orm import Base, Staff
+
+MODEL = Staff
+TABLE = MODEL.__table__
 
 
+async def main():
+    engine = get_engine()
+
+    async with engine.begin() as conn:
+        await conn.run_sync(TABLE.drop, checkfirst=True)
+        await conn.run_sync(TABLE.create)
+
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        owner = Staff(
+            max_user_id=38849435,
+            username=None,
+            first_name="Дмитрий",
+            last_name="Сучков",
+            phone="REDACTED_PHONE",
+            is_owner=True,
+        )
+        session.add(owner)
+        await session.commit()
+        print(f"Created staff id={owner.id}")
+
+    await engine.dispose()
 
 
-register_base_modify_info_trigger()
-
-if __name__ == '__main__':
-    Base.metadata.schema = "is_budget"
-    Base.metadata.reflect(bind=engine)
-
-    # MODEL = m.PurchaseRequestLineAllocation
-    MODEL = MoneyTransfer
-    # MODEL = db.models.PlanOrm
-    TABLE = MODEL.__table__
-    # TABLE = purchase_lines_assignees
-
-    # TABLE =  db.models.
-    try:
-        TABLE.drop(bind=engine)
-    except Exception as e:
-        print('exception ...')
-        db_session.rollback()
-        print(e)
-
-    TABLE.create(bind=engine)
+if __name__ == "__main__":
+    asyncio.run(main())
