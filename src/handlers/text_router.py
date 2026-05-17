@@ -35,6 +35,7 @@ from src.handlers.registration import _format_confirmation, _parse_date
 from src.handlers.profile import _profile_text, _child_text
 from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast
 from src.handlers.staff import _send_customer_profile_by_id
+from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,81 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 return
             await _create_broadcast(bot, user_id, context, scheduled_at, status="pending")
             return
+
+    # Scenario 15 Flow B: coupon issuance
+    if state == StaffState.AWAITING_COUPON_VALUE:
+        try:
+            val = int(text)
+        except ValueError:
+            await bot.send_message(user_id=user_id, text="Введите целое число.")
+            return
+        if val < 101 or val > 1000:
+            await bot.send_message(user_id=user_id, text="Введите сумму от 101 до 1000 рублей.")
+            return
+        await context.update_data(coupon_draft_value=val)
+        await context.set_state(StaffState.AWAITING_COUPON_DAYS)
+        await bot.send_message(
+            user_id=user_id,
+            text="Срок действия купона (в днях, минимум 7):",
+            attachments=[cancel_keyboard("coupon:issue_cancel")],
+        )
+        return
+
+    if state == StaffState.AWAITING_COUPON_DAYS:
+        try:
+            days = int(text)
+        except ValueError:
+            await bot.send_message(user_id=user_id, text="Введите целое число.")
+            return
+        if days < 7:
+            await bot.send_message(user_id=user_id, text="Срок должен быть не менее 7 дней.")
+            return
+        await context.update_data(coupon_draft_days=days)
+        await context.set_state(StaffState.AWAITING_COUPON_PCT)
+        await bot.send_message(
+            user_id=user_id,
+            text="Максимальный процент от покупки, который можно оплатить купоном (1–100):",
+            attachments=[cancel_keyboard("coupon:issue_cancel")],
+        )
+        return
+
+    if state == StaffState.AWAITING_COUPON_PCT:
+        try:
+            pct = int(text)
+        except ValueError:
+            await bot.send_message(user_id=user_id, text="Введите целое число.")
+            return
+        if pct < 1 or pct > 100:
+            await bot.send_message(user_id=user_id, text="Введите число от 1 до 100.")
+            return
+        data = await context.get_data()
+        customer_id = data.get("coupon_target_customer_id")
+        value = data.get("coupon_draft_value")
+        days = data.get("coupon_draft_days")
+        survey_coupon = None
+        cust = None
+        try:
+            async with get_session_factory()() as session:
+                async with session.begin():
+                    survey_coupon = await coupon_model.create_seller_coupon(
+                        session, customer_id, value, days, pct
+                    )
+                    cust = await customer_model.get_by_id(session, customer_id)
+        except Exception:
+            logger.exception("Seller coupon creation failed for customer_id=%s", customer_id)
+            await bot.send_message(user_id=user_id, text="Ошибка. Попробуйте ещё раз.")
+            return
+        await context.set_state(RegistrationState.REGISTERED)
+        await bot.send_message(user_id=user_id, text="Купон выдан.")
+        if cust:
+            try:
+                await bot.send_message(
+                    user_id=cust.max_user_id,
+                    text=coupon_issued_notification(survey_coupon),
+                )
+            except Exception:
+                logger.warning("Could not notify customer %s of coupon issuance", cust.max_user_id)
+        return
 
     # Customer ID lookup
     if state == StaffState.AWAITING_CUSTOMER_ID:
@@ -340,6 +416,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id):
         if customer is None:
             return
         data = await context.get_data()
+        new_survey_coupon = None
         try:
             async with get_session_factory()() as session:
                 async with session.begin():
@@ -354,7 +431,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id):
                         await customer_model.update_field(
                             session, customer.id, survey_completed=True
                         )
-                        await coupon_model.create_survey_coupon(session, customer.id)
+                        new_survey_coupon = await coupon_model.create_survey_coupon(session, customer.id)
                     children = await child_model.get_by_customer(session, customer.id)
         except Exception:
             logger.exception("Add child failed")
@@ -366,6 +443,14 @@ async def _handle_customer_text(event, context, customer, state, text, user_id):
             text="👶 Ваши дети:",
             attachments=[children_list_keyboard(children)],
         )
+        if new_survey_coupon is not None:
+            try:
+                await bot.send_message(
+                    user_id=user_id,
+                    text=coupon_issued_notification(new_survey_coupon),
+                )
+            except Exception:
+                logger.warning("Could not send coupon notification to user %s", user_id)
         return
 
     if state == "editing_child_field":

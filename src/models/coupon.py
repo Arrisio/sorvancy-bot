@@ -43,6 +43,28 @@ async def create_survey_coupon(session: AsyncSession, customer_id: int) -> Coupo
     return coupon
 
 
+async def create_seller_coupon(
+    session: AsyncSession,
+    customer_id: int,
+    value: int,
+    validity_days: int,
+    max_payment_pct: int,
+) -> Coupon:
+    now = datetime.now(tz=timezone.utc)
+    coupon = Coupon(
+        customer_id=customer_id,
+        type="seller",
+        value=value,
+        max_payment_pct=max_payment_pct,
+        valid_until=now + timedelta(days=validity_days),
+        status="active",
+    )
+    session.add(coupon)
+    await session.flush()
+    await session.refresh(coupon)
+    return coupon
+
+
 async def mark_used(session: AsyncSession, coupon_id: int) -> Optional[Coupon]:
     now = datetime.now(tz=timezone.utc)
     result = await session.execute(

@@ -128,6 +128,7 @@ def confirmation_card_keyboard(has_children: bool):
 
 def contact_keyboard():
     builder = InlineKeyboardBuilder()
+    builder.row(RequestContactButton(text="📞 Запрос контактов"))
     builder.row(
         CallbackButton(text="Завершить заполнение анкеты", payload="contact:skip"),
     )
@@ -205,6 +206,12 @@ def staff_profile_keyboard(customer_id: int, coupons):
         CallbackButton(
             text="Изменить % скидки",
             payload=f"discount:edit:{customer_id}",
+        )
+    )
+    builder.row(
+        CallbackButton(
+            text="Выдать купон",
+            payload=f"coupon:issue:{customer_id}",
         )
     )
     return builder.as_markup()

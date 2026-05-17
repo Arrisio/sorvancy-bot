@@ -44,6 +44,7 @@ from src.handlers.registration import _format_confirmation, _parse_date
 from src.handlers.profile import _profile_text, _child_text
 from src.handlers.broadcast import _create_broadcast, _parse_scheduled_at
 from src.handlers.staff import _send_customer_profile_by_id
+from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +197,29 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
 
     if payload == "coupon:cancel":
         await bot.send_message(user_id=user_id, text="Отменено.")
+        return
+
+    # Scenario 15: issue seller coupon
+    if payload.startswith("coupon:issue:"):
+        customer_id = int(payload.split(":")[-1])
+        async with get_session_factory()() as session:
+            cust = await customer_model.get_by_id(session, customer_id)
+        if cust is None:
+            await bot.send_message(user_id=user_id, text="Клиент не найден.")
+            return
+        name = " ".join(filter(None, [cust.first_name or "", cust.last_name or ""])) or str(customer_id)
+        await context.update_data(coupon_target_customer_id=customer_id)
+        await context.set_state(StaffState.AWAITING_COUPON_VALUE)
+        await bot.send_message(
+            user_id=user_id,
+            text=f"Выдаёте купон клиенту {name}. Введите максимальную сумму купона (в рублях, 101–1000):",
+            attachments=[cancel_keyboard("coupon:issue_cancel")],
+        )
+        return
+
+    if payload == "coupon:issue_cancel":
+        await context.set_state(RegistrationState.REGISTERED)
+        await bot.send_message(user_id=user_id, text="Выдача купона отменена.")
         return
 
     # Broadcast callbacks (owner only)
@@ -862,8 +886,9 @@ async def _complete_survey(bot, user_id, context):
                         gender=ch_data["gender"],
                         birthdate=bd,
                     )
+                survey_coupon = None
                 if not was_completed and survey_completed:
-                    await coupon_model.create_survey_coupon(session, cust.id)
+                    survey_coupon = await coupon_model.create_survey_coupon(session, cust.id)
         logger.info("Survey saved for max_user_id=%s survey_completed=%s", user_id, survey_completed)
     except Exception:
         logger.exception("Survey save failed for max_user_id=%s", user_id)
@@ -878,3 +903,11 @@ async def _complete_survey(bot, user_id, context):
         text="Анкета заполнена! Спасибо 🎉",
         attachments=[registered_keyboard()],
     )
+    if survey_coupon is not None:
+        try:
+            await bot.send_message(
+                user_id=user_id,
+                text=coupon_issued_notification(survey_coupon),
+            )
+        except Exception:
+            logger.warning("Could not send coupon notification to user %s", user_id)

@@ -61,6 +61,11 @@ def staff_customer_profile_message(customer, coupons: list) -> str:
     return "\n".join(lines)
 
 
+def coupon_issued_notification(coupon) -> str:
+    until = coupon.valid_until.strftime("%d.%m.%Y")
+    return f"Вам выдан купон на {coupon.value} ₽. Успейте потратить до {until}."
+
+
 def customer_qr_deeplink(customer_id: int) -> str:
     return f"{config.DEEPLINK_BASE}customer_{customer_id}"
 
