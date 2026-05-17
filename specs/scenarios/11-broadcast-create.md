@@ -1,7 +1,7 @@
 # Scenario: Create and Schedule Broadcast
 
 ## Goal
-Superuser creates mass message delivery to selected customers and sets start time.
+Superuser creates mass message delivery to selected customers and sets start time within allowed broadcast window.
 
 ## Actors
 - Superuser (Staff with `is_owner = true`)
@@ -19,33 +19,36 @@ Superuser clicks «Запустить рассылку» button.
 2. Bot sends: «Пришлите сообщение для рассылки»
 3. Superuser sends message with broadcast content — any message type is accepted: text, photo, file, video, audio, sticker, or any other supported attachment; the original message is saved by reference
 4. Bot saves reference to original message (will be forwarded to each recipient via Forward — not re-sent as new message; attachments preserved automatically); sends: «Пришлите номера клиентов для рассылки» + inline button [Отмена]
-5. Superuser sends recipient list — either:
-   - Text message containing Customer IDs
-   - Excel or CSV file (same format as Excel export scenario; rows hidden by filter treated as excluded)
+5. Superuser sends recipient list as text — Customer IDs separated by any delimiter (whitespace, comma, semicolon); parsed by same shared utility as birthdate input (`_parse_date` pattern — split on any non-digit)
 6. Bot resolves recipient list: deduplicates customer IDs in-memory (owner may submit same ID twice); excludes customers with `opt_out_marketing = true`
-7. Bot sends: «Создана рассылка на {количество} получателей. Когда её начать?» + buttons [Начать сейчас] [Отмена]
+7. Bot sends: «Создана рассылка на {количество} получателей. Когда её начать? Рассылку можно запланировать с {BROADCAST_WINDOW_START_HOUR}:00 до {BROADCAST_WINDOW_END_HOUR}:00.» + buttons [Начать в ближайшее время] [Отмена]
 8. Superuser responds with start time choice:
-   - Clicks [Начать сейчас] → `scheduled_at = now()`; Broadcast status → `running`; delivery begins immediately
-   - Sends date only (e.g. «25.06») → `scheduled_at = that date at 11:00`; Broadcast status → `pending`
-   - Sends date + time (e.g. «25.06 14:30») → `scheduled_at = that datetime`; Broadcast status → `pending`
+   - Clicks [Начать в ближайшее время] → `scheduled_at` = nearest available window slot (see nfr/broadcast-delivery.md §Broadcast window); Broadcast status → `pending`
+   - Sends date only (e.g. «25.06») → `scheduled_at = that date at BROADCAST_WINDOW_START_HOUR:00`; Broadcast status → `pending`
+   - Sends date + time (e.g. «25.06 14:30») → validates time falls within broadcast window; if valid: `scheduled_at = that datetime`, Broadcast status → `pending`; if invalid: → N1
    - Clicks [Отмена] → scenario ends; no Broadcast record created
+9. Bot confirms: «Рассылка #{id} запланирована на {DD.MM.YYYY HH:MM}. Получателей: {count}.»
 
 ## Alternative flows
 
 ### A1: Superuser clicks [Отмена] at step 4
 - Scenario ends; no Broadcast record created.
 
+## Negative scenarios
+
+### N1: Scheduled time outside broadcast window
+- Superuser sends date+time (step 8) where time falls outside `[BROADCAST_WINDOW_START_HOUR:00, BROADCAST_WINDOW_END_HOUR:00)` interval
+- Bot sends: «Время {HH:MM} недоступно для рассылки. Укажите время с {BROADCAST_WINDOW_START_HOUR}:00 до {BROADCAST_WINDOW_END_HOUR}:00.»
+- Superuser can retry — re-enter date+time, click [Начать в ближайшее время], or click [Отмена]
+
 ## Postconditions
-- Broadcast record created in DB with recipient list size, scheduled start time, status
-- If immediate: delivery begins; see nfr/broadcast-delivery.md for delivery mechanics
-- On delivery completion: bot sends superuser: «Рассылка {id} завершена. Отправлено успешно: {sent_count}. Не удалось доставить: {failed_count}.»
+- Broadcast record created in DB with recipient list size, scheduled start time, status `pending`
+- Confirmation message sent to superuser includes exact scheduled datetime (`DD.MM.YYYY HH:MM`)
+- Scheduler picks up broadcast when `scheduled_at ≤ now()` and triggers delivery; see nfr/broadcast-delivery.md
+- Pending broadcasts can be cancelled via scenario 12
 
 ## NFR refs
 - broadcast-delivery.md
 
 ## Open questions
-- [ ] Excel/CSV recipient parsing: which column contains Customer ID? Must match Excel export scenario column name.
-- [ ] Excel filtered rows: bot reads only visible (non-hidden) rows — confirm that this is expected behavior.
-- [ ] Text message with IDs: exact delimiter format? (space-separated, one per line, comma-separated?)
-- [ ] Date parsing timezone: which timezone applies to `scheduled_at` when user sends date without offset?
-- [ ] Can a `running` broadcast be cancelled via scenario 12, or only `pending` ones?
+- [x] Date parsing timezone: Asia/Yekaterinburg — confirmed intentional.

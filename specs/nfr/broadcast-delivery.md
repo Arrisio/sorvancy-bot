@@ -24,8 +24,13 @@ Delivery phase of scenario 11 (Create and Schedule Broadcast).
 
 ### Scheduler
 - Delivery triggered by hourly scheduled job polling for Broadcasts where status=`pending` AND `scheduled_at ≤ now()`
-- Immediate broadcasts (status=`running` at creation): picked up on next job tick (≤1 hour delay) or triggered inline — developer chooses simpler option
 - See scenario 18 for full delivery flow
+
+### Broadcast window
+- Allowed delivery hours configurable via env vars `BROADCAST_WINDOW_START_HOUR` (default `10`) and `BROADCAST_WINDOW_END_HOUR` (default `17`)
+- Window is interpreted as `[BROADCAST_WINDOW_START_HOUR:00, BROADCAST_WINDOW_END_HOUR:00)` in the bot's local timezone (Asia/Yekaterinburg)
+- [Начать в ближайшее время]: if current time is within window → `scheduled_at = now()`; if outside window → `scheduled_at = next calendar day at BROADCAST_WINDOW_START_HOUR:00`
+- User-supplied date+time with time outside window → rejected at input; see scenario 11 N1
 
 ## Open questions
 - [ ] Retry count limit: max retries per recipient before marking as permanently failed?
