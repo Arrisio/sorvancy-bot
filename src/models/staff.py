@@ -28,7 +28,6 @@ async def create(
     session: AsyncSession,
     max_user_id: int,
     username: Optional[str] = None,
-    phone: Optional[str] = None,
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
     is_owner: bool = False,
@@ -36,7 +35,6 @@ async def create(
     staff = Staff(
         max_user_id=max_user_id,
         username=username,
-        phone=phone,
         first_name=first_name,
         last_name=last_name,
         is_owner=is_owner,

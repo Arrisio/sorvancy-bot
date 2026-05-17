@@ -69,7 +69,6 @@ class Staff(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     max_user_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     username: Mapped[str | None] = mapped_column(String(255))
-    phone: Mapped[str | None] = mapped_column(String(20))
     first_name: Mapped[str | None] = mapped_column(String(255))
     last_name: Mapped[str | None] = mapped_column(String(255))
     is_owner: Mapped[bool] = mapped_column(

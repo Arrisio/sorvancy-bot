@@ -13,8 +13,8 @@ DB_PASSWORD: str = os.environ["DB_PASSWORD"]
 
 DISCOUNT_PERCENT: int = int(os.environ.get("DISCOUNT_PERCENT", 10))
 
-OWNER_MAX_USER_ID: int | None = (
-    int(os.environ["OWNER_MAX_USER_ID"]) if os.environ.get("OWNER_MAX_USER_ID") else None
+OWNER_ID: int | None = (
+    int(os.environ["OWNER_ID"]) if os.environ.get("OWNER_ID") else None
 )
 
 BROADCAST_SEND_DELAY_SECONDS: float = float(os.environ.get("BROADCAST_SEND_DELAY_SECONDS", 15))

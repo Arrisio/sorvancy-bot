@@ -46,8 +46,8 @@ async def _deliver_broadcast(bot, broadcast) -> None:
     creator_max_id: int | None = None
     if broadcast.creator:
         creator_max_id = broadcast.creator.max_user_id
-    elif config.OWNER_MAX_USER_ID:
-        creator_max_id = config.OWNER_MAX_USER_ID
+    elif config.OWNER_ID:
+        creator_max_id = config.OWNER_ID
 
     async with get_session_factory()() as session:
         recipients = await broadcast_model.get_pending_recipients(session, broadcast.id)

@@ -109,9 +109,8 @@ async def register_staff_handlers(dp):
             return
         for seller in sellers:
             name = " ".join(filter(None, [seller.first_name, seller.last_name])) or "—"
-            phone = seller.phone or "—"
             await event.message.answer(
-                f"👤 {name}\nТелефон: {phone}",
+                f"👤 {name}",
                 attachments=[delete_seller_keyboard(seller.id)],
             )
 

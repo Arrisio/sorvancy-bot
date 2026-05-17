@@ -5,8 +5,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy import select
+
 from src.db.connection import get_engine
-from src.db.orm import Base
+from src.db.orm import Base, Staff
 
 
 async def main():
@@ -15,6 +18,20 @@ async def main():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         print("DB schema up to date.")
+
+        owner_id = os.environ.get("OWNER_ID")
+        if owner_id:
+            async_session = async_sessionmaker(engine, expire_on_commit=False)
+            async with async_session() as session:
+                existing = await session.scalar(
+                    select(Staff).where(Staff.max_user_id == int(owner_id))
+                )
+                if not existing:
+                    session.add(Staff(max_user_id=int(owner_id), is_owner=True))
+                    await session.commit()
+                    print(f"Owner staff record created (max_user_id={owner_id}).")
+                else:
+                    print("Owner staff record already exists, skipping.")
     finally:
         await engine.dispose()
 
