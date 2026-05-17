@@ -96,5 +96,28 @@ async def toggle_opt_out(
     )
 
 
+async def save_survey_draft(
+    session: AsyncSession,
+    max_user_id: int,
+    draft: dict,
+) -> None:
+    await session.execute(
+        update(Customer)
+        .where(Customer.max_user_id == max_user_id)
+        .values(survey_draft=draft)
+    )
+
+
+async def clear_survey_draft(
+    session: AsyncSession,
+    max_user_id: int,
+) -> None:
+    await session.execute(
+        update(Customer)
+        .where(Customer.max_user_id == max_user_id)
+        .values(survey_draft=None)
+    )
+
+
 async def is_registered(session: AsyncSession, max_user_id: int) -> bool:
     return await get_by_max_id(session, max_user_id) is not None

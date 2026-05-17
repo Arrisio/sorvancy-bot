@@ -67,9 +67,14 @@ async def register_profile_handlers(dp):
                 "Вы не зарегистрированы.", attachments=[registered_keyboard()]
             )
             return
-        if customer.first_name is None:
+        if not customer.survey_completed:
+            text = (
+                "👤 Ваш профиль\n\nАнкета не завершена — есть незаполненные данные."
+                if customer.survey_draft
+                else "👤 Ваш профиль\n\nАнкета не заполнена"
+            )
             await event.message.answer(
-                "👤 Ваш профиль\n\nАнкета не заполнена",
+                text,
                 attachments=[empty_profile_keyboard()],
             )
             return

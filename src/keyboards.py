@@ -69,6 +69,15 @@ def survey_offer_keyboard():
     return builder.as_markup()
 
 
+def resume_survey_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="▶️ Продолжить", payload="survey:resume"),
+        CallbackButton(text="🔄 Начать заново", payload="survey:restart"),
+    )
+    return builder.as_markup()
+
+
 def back_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(CallbackButton(text="← Назад", payload="back"))

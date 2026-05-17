@@ -3,6 +3,7 @@ from sqlalchemy import (
     BigInteger, Boolean, Integer, String, Text, Date, TIMESTAMP,
     ForeignKey, CheckConstraint, UniqueConstraint, Sequence,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -35,6 +36,7 @@ class Customer(Base):
     last_touch: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True), nullable=True
     )
+    survey_draft: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     children: Mapped[list["Child"]] = relationship(
         back_populates="customer", cascade="all, delete-orphan"

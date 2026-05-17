@@ -40,6 +40,7 @@ from src.handlers.registration import _format_confirmation, _parse_date
 from src.handlers.profile import _profile_text, _child_text
 from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast
 from src.handlers.staff import _send_customer_profile_by_id
+from src.handlers.callback_router import _persist_survey_draft
 from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
@@ -262,6 +263,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
     if state == RegistrationState.AWAITING_FIRST_NAME:
         await context.update_data(**{"draft.first_name": text})
         await context.set_state(RegistrationState.AWAITING_LAST_NAME)
+        await _persist_survey_draft(context, user_id)
         await bot.send_message(
             user_id=user_id,
             text="Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. "
@@ -273,6 +275,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
     if state == RegistrationState.AWAITING_LAST_NAME:
         await context.update_data(**{"draft.last_name": text})
         await context.set_state(RegistrationState.AWAITING_CUSTOMER_BIRTHDATE)
+        await _persist_survey_draft(context, user_id)
         await bot.send_message(
             user_id=user_id,
             text="Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
@@ -293,6 +296,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         data = await context.get_data()
         children = data.get("draft.children", [])
         await context.set_state(RegistrationState.AWAITING_CHILD_NAME)
+        await _persist_survey_draft(context, user_id)
         if not children:
             await bot.send_message(
                 user_id=user_id,
@@ -314,6 +318,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         await context.update_data(**{"draft.children": children})
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_CHILD_GENDER)
+        await _persist_survey_draft(context, user_id)
         await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? "
@@ -338,6 +343,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         await context.update_data(**{"draft.children": children})
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_MORE_CHILDREN)
+        await _persist_survey_draft(context, user_id)
         await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",
@@ -362,6 +368,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
             else:
                 val = text
             await context.update_data(**{f"draft.{field}": val, "draft.editing_field": None})
+            await _persist_survey_draft(context, user_id)
             data = await context.get_data()
             children = data.get("draft.children", [])
             await bot.send_message(
