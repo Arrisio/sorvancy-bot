@@ -17,27 +17,30 @@ User clicks "Скидка" button.
 
 1. Bot loads Customer from DB by `max_user_id`
 2. Bot generates QR PNG encoding Max Messenger deeplink containing customer identifier
-3. Bot sends message with QR image and customer number: «Покажите этот QR-код продавцу» + display of customer number (exact field and label TBD — see Open questions)
-4. User shows QR to seller; seller scans → scenario 06 triggers
+3. Bot sends message with QR image, customer number, discount percent, deeplink URL, and link label:
+   ```
+   Покажите этот QR-код продавцу
+   Номер клиента: {customer.id}
+   Скидка: {customer.discount_percent}%
+   
+   Ссылка для продавца:
+   {deeplink_url}
+   ```
+4. User shows QR (or shares link) to seller; seller scans/opens → scenario 06 triggers
 
 ## Alternative flows
 
 ### A1: QR generation raises exception
 - Error logged
-- Fallback: bot sends deeplink as text URL
-- User can share link manually
+- Bot sends same text without QR image (link already present as text — user can share manually)
 
 ### A2: User not registered
 - Bot: «Вы ещё не зарегистрированы. Нажмите кнопку ниже.» + `unregistered_keyboard`
 
 ## Postconditions
-- User has QR visible on screen
+- User has QR and deeplink URL visible on screen
 - No DB writes
 
 ## Open questions
-- [ ] Button name/payload: user description says "Скидка"; existing code uses "Показать код на скидку" (`SHOW_DISCOUNT_BTN_TEXT`). Rename or add new button?
-- [ ] Deeplink format: exact Max Messenger deeplink URL structure with customer identifier payload?
-- [ ] Customer identifier in deeplink: `max_user_id`, internal `id`, or signed token?
-- [ ] Previous QR data format was `SORVANCY:DISCOUNT:{max_user_id}:{discount_percent}%` (old scenario 03 + src/ code). Now replaced by deeplink. Code divergence — update needed.
-- [ ] Message text: show customer's discount percent alongside QR, or instruction only?
-- [ ] Customer number field: which field serves as «номер клиента» shown alongside QR — internal DB `id`, `max_user_id`, or other? Must match value accepted in scenario 10.
+- [ ] Link label text: «Ссылка для продавца:» confirmed? Or different wording?
+- [ ] Button name/payload: user description says "Скидка"; existing code uses `DISCOUNT_BTN_TEXT`. Verify they match.
