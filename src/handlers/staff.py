@@ -2,6 +2,7 @@
 Staff reply-keyboard handlers (scenarios 04, 09, 10).
 Text and callback handling is in text_router.py and callback_router.py.
 """
+import re
 import logging
 from maxapi.types import MessageCreated
 from maxapi.filters import F
@@ -20,7 +21,14 @@ from src.models import customer as customer_model
 from src.models import coupon as coupon_model
 from src.services.discount import staff_customer_profile_message
 from src.keyboards import staff_profile_keyboard
-from src.db.orm import Staff
+from src.db.orm import Staff, Customer
+
+
+def _phone_from_vcf(vcf_info: str | None) -> str | None:
+    if not vcf_info:
+        return None
+    m = re.search(r'TEL[^:\r\n]*:(\+?\d+)', vcf_info)
+    return m.group(1) if m else None
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +36,37 @@ logger = logging.getLogger(__name__)
 async def register_staff_handlers(dp):
 
     # Scenario 04: contact card from superuser → register new seller
+    # Also handles customer contact sharing during survey (scenario 02, step 10 Path A)
     @dp.message_created(F.message.body.attachments)
     async def on_contact_card(
         event: MessageCreated,
         context: MemoryContext,
         staff: Staff | None = None,
+        customer: Customer | None = None,
         route: str = "registration",
     ):
+        # Survey contact path: customer shares phone in AWAITING_CONTACT
+        if route == "customer":
+            state = await context.get_state()
+            if state == RegistrationState.AWAITING_CONTACT:
+                user_id = event.message.sender.user_id
+                attachments = event.message.body.attachments or []
+                contact = None
+                for att in attachments:
+                    if hasattr(att, "type") and getattr(att, "type", "") == "contact":
+                        contact = att
+                        break
+                if contact is not None:
+                    vcf_info = getattr(getattr(contact, "payload", None), "vcf_info", None)
+                    phone = _phone_from_vcf(vcf_info)
+                    if phone:
+                        await context.update_data(**{"draft.phone": phone})
+                    from src.handlers.callback_router import _complete_survey
+                    await _complete_survey(event.bot, user_id, context)
+                else:
+                    logger.warning("No contact attachment in AWAITING_CONTACT event for user %s", user_id)
+            return
+
         if route != "staff" or staff is None or not staff.is_owner:
             return
         attachments = event.message.body.attachments or []
