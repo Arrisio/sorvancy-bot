@@ -38,6 +38,7 @@ class StaffState:
     AWAITING_BROADCAST_RECIPIENTS = "awaiting_broadcast_recipients"
     AWAITING_BROADCAST_TIME = "awaiting_broadcast_time"
     AWAITING_SELLER_CONFIRM = "awaiting_seller_confirm"
+    AWAITING_BROADCAST_COUPON_CHOICE = "awaiting_broadcast_coupon_choice"
     AWAITING_COUPON_VALUE = "awaiting_coupon_value"
     AWAITING_COUPON_DAYS = "awaiting_coupon_days"
     AWAITING_COUPON_PCT = "awaiting_coupon_pct"

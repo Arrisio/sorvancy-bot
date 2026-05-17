@@ -87,6 +87,28 @@ async def create_birthday_coupon(
     return coupon
 
 
+async def create_broadcast_coupon(
+    session: AsyncSession,
+    customer_id: int,
+    value: int,
+    validity_days: int,
+    max_payment_pct: int,
+) -> Coupon:
+    now = datetime.now(tz=timezone.utc)
+    coupon = Coupon(
+        customer_id=customer_id,
+        type="broadcast",
+        value=value,
+        max_payment_pct=max_payment_pct,
+        valid_until=now + timedelta(days=validity_days),
+        status="active",
+    )
+    session.add(coupon)
+    await session.flush()
+    await session.refresh(coupon)
+    return coupon
+
+
 async def expire_coupons(session: AsyncSession) -> int:
     now = datetime.now(tz=timezone.utc)
     result = await session.execute(

@@ -38,9 +38,9 @@ from src.keyboards import (
 import config
 from src.handlers.registration import _format_confirmation, _parse_date, _parse_int_list
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast, _in_window
+from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast, _in_window, _ask_broadcast_recipients
 from src.handlers.staff import _send_customer_profile_by_id
-from src.handlers.callback_router import _persist_survey_draft
+from src.handlers.callback_router import _persist_survey_draft, _append_step_mid
 from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 eligible = await broadcast_model.get_eligible_customer_ids(session, ids)
             await context.update_data(broadcast_recipient_ids=eligible)
             await context.set_state(StaffState.AWAITING_BROADCAST_TIME)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text=(
                     f"Создана рассылка на {len(eligible)} получателей. Когда её начать?\n"
@@ -103,6 +103,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 ),
                 attachments=[broadcast_start_keyboard()],
             )
+            await _append_step_mid(context, sent.message.mid)
             return
 
         if state == StaffState.AWAITING_BROADCAST_TIME:
@@ -136,13 +137,17 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         if val < 101 or val > 1000:
             await bot.send_message(user_id=user_id, text="Введите сумму от 101 до 1000 рублей.")
             return
+        data = await context.get_data()
+        coupon_ctx = data.get("coupon_context", "seller")
         await context.update_data(coupon_draft_value=val)
         await context.set_state(StaffState.AWAITING_COUPON_DAYS)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Срок действия купона (в днях, минимум 7):",
             attachments=[cancel_keyboard("coupon:issue_cancel")],
         )
+        if coupon_ctx == "broadcast":
+            await _append_step_mid(context, sent.message.mid)
         return
 
     if state == StaffState.AWAITING_COUPON_DAYS:
@@ -154,13 +159,17 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         if days < 7:
             await bot.send_message(user_id=user_id, text="Срок должен быть не менее 7 дней.")
             return
+        data = await context.get_data()
+        coupon_ctx = data.get("coupon_context", "seller")
         await context.update_data(coupon_draft_days=days)
         await context.set_state(StaffState.AWAITING_COUPON_PCT)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Максимальный процент от покупки, который можно оплатить купоном (1–100):",
             attachments=[cancel_keyboard("coupon:issue_cancel")],
         )
+        if coupon_ctx == "broadcast":
+            await _append_step_mid(context, sent.message.mid)
         return
 
     if state == StaffState.AWAITING_COUPON_PCT:
@@ -173,6 +182,18 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             await bot.send_message(user_id=user_id, text="Введите число от 1 до 100.")
             return
         data = await context.get_data()
+        coupon_ctx = data.get("coupon_context", "seller")
+
+        if coupon_ctx == "broadcast":
+            await context.update_data(
+                broadcast_coupon_value=data.get("coupon_draft_value"),
+                broadcast_coupon_days=data.get("coupon_draft_days"),
+                broadcast_coupon_pct=pct,
+                coupon_context=None,
+            )
+            await _ask_broadcast_recipients(bot, user_id, context)
+            return
+
         customer_id = data.get("coupon_target_customer_id")
         value = data.get("coupon_draft_value")
         days = data.get("coupon_draft_days")
@@ -275,33 +296,36 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         await context.update_data(**{"draft.first_name": text})
         await context.set_state(RegistrationState.AWAITING_LAST_NAME)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. "
                  "Можно пропустить 😊",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     if state == RegistrationState.AWAITING_LAST_NAME:
         await context.update_data(**{"draft.last_name": text})
         await context.set_state(RegistrationState.AWAITING_CUSTOMER_BIRTHDATE)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     if state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
         bd = _parse_date(text)
         if bd is None:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
                 attachments=[back_and_skip_keyboard()],
             )
+            await _append_step_mid(context, sent.message.mid)
             return
         await context.update_data(**{"draft.birthdate": str(bd)})
         data = await context.get_data()
@@ -309,17 +333,18 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         await context.set_state(RegistrationState.AWAITING_CHILD_NAME)
         await _persist_survey_draft(context, user_id)
         if not children:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Шаг 4 из 4 · Как зовут вашего ребёнка?",
                 attachments=[buy_for_self_keyboard()],
             )
         else:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Как зовут следующего ребёнка?",
                 attachments=[back_keyboard()],
             )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     if state == RegistrationState.AWAITING_CHILD_NAME:
@@ -330,22 +355,24 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_CHILD_GENDER)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? "
                  "Подберём подходящие предложения:",
             attachments=[gender_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     if state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
         bd = _parse_date(text)
         if bd is None:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
                 attachments=[back_and_skip_keyboard()],
             )
+            await _append_step_mid(context, sent.message.mid)
             return
         data = await context.get_data()
         children = data.get("draft.children", [])
@@ -355,11 +382,12 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_MORE_CHILDREN)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",
             attachments=[yes_no_keyboard("more_children:yes", "more_children:no")],
         )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     # Survey confirmation card inline edit
@@ -382,11 +410,27 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
             await _persist_survey_draft(context, user_id)
             data = await context.get_data()
             children = data.get("draft.children", [])
-            await bot.send_message(
-                user_id=user_id,
-                text=_format_confirmation(data),
-                attachments=[confirmation_card_keyboard(has_children=bool(children))],
-            )
+            card_mid = data.get("confirmation_card_mid")
+            if card_mid:
+                try:
+                    await bot.edit_message(
+                        message_id=card_mid,
+                        text=_format_confirmation(data),
+                        attachments=[confirmation_card_keyboard(has_children=bool(children))],
+                    )
+                except Exception:
+                    logger.warning("edit_message failed for confirmation card, sending new")
+                    await bot.send_message(
+                        user_id=user_id,
+                        text=_format_confirmation(data),
+                        attachments=[confirmation_card_keyboard(has_children=bool(children))],
+                    )
+            else:
+                await bot.send_message(
+                    user_id=user_id,
+                    text=_format_confirmation(data),
+                    attachments=[confirmation_card_keyboard(has_children=bool(children))],
+                )
         return
 
     # Profile editing states

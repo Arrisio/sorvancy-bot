@@ -20,6 +20,7 @@ from src.models import coupon as coupon_model
 from src.models import customer as customer_model
 from maxapi.types.message import NewMessageLink
 from maxapi.enums.message_link_type import MessageLinkType
+from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ async def _deliver_broadcast(bot, broadcast) -> None:
             async with get_session_factory()() as session:
                 await broadcast_model.mark_recipient_failed(session, recipient.id, "no max_user_id")
             continue
+        forward_ok = False
         try:
             await bot.send_message(
                 user_id=max_user_id,
@@ -67,10 +69,29 @@ async def _deliver_broadcast(bot, broadcast) -> None:
             )
             async with get_session_factory()() as session:
                 await broadcast_model.mark_recipient_sent(session, recipient.id)
+            forward_ok = True
         except Exception as e:
             logger.warning("Scheduler broadcast %s: failed for customer %s: %s", broadcast.id, recipient.customer_id, e)
             async with get_session_factory()() as session:
                 await broadcast_model.mark_recipient_failed(session, recipient.id, str(e))
+
+        if forward_ok and broadcast.coupon_value is not None and recipient.customer:
+            try:
+                async with get_session_factory()() as session:
+                    async with session.begin():
+                        coupon = await coupon_model.create_broadcast_coupon(
+                            session,
+                            customer_id=recipient.customer.id,
+                            value=broadcast.coupon_value,
+                            validity_days=broadcast.coupon_validity_days,
+                            max_payment_pct=broadcast.coupon_max_payment_pct,
+                        )
+                await bot.send_message(
+                    user_id=max_user_id,
+                    text=coupon_issued_notification(coupon),
+                )
+            except Exception:
+                logger.warning("Broadcast %s: coupon failed for customer %s", broadcast.id, recipient.customer_id)
 
     async with get_session_factory()() as session:
         b = await broadcast_model.finish(session, broadcast.id)

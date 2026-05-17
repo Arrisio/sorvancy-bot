@@ -16,6 +16,7 @@ from maxapi.context import MemoryContext
 from src.states import StaffState, RegistrationState
 from src.keyboards import (
     broadcast_start_keyboard,
+    broadcast_coupon_choice_keyboard,
     cancel_broadcast_keyboard,
     cancel_keyboard,
     superuser_keyboard,
@@ -28,6 +29,23 @@ from src.db.orm import Staff
 import config
 
 logger = logging.getLogger(__name__)
+
+
+async def _append_step_mid(context, mid: str) -> None:
+    data = await context.get_data()
+    mids = list(data.get("step_mids") or [])
+    mids.append(mid)
+    await context.update_data(step_mids=mids)
+
+
+async def _delete_step_mids(bot, context) -> None:
+    data = await context.get_data()
+    for mid in (data.get("step_mids") or []):
+        try:
+            await bot.delete_message(message_id=mid)
+        except Exception:
+            pass
+    await context.update_data(step_mids=[])
 
 
 def _in_window(dt: datetime) -> bool:
@@ -79,10 +97,12 @@ async def register_broadcast_handlers(dp):
         if route != "staff" or staff is None or not staff.is_owner:
             return
         await context.set_state(StaffState.AWAITING_BROADCAST_MSG)
-        await event.message.answer(
+        await context.update_data(step_mids=[])
+        sent = await event.message.answer(
             "Пришлите сообщение для рассылки",
             attachments=[cancel_keyboard("broadcast:cancel_create")],
         )
+        await _append_step_mid(context, sent.message.mid)
 
     @dp.message_created(F.message.body.text == BROADCAST_LIST_BTN_TEXT)
     async def on_broadcast_list(
@@ -107,7 +127,6 @@ async def register_broadcast_handlers(dp):
 
 
 async def _save_broadcast_source(event, context) -> None:
-    """Save broadcast source message reference and advance state to AWAITING_BROADCAST_RECIPIENTS."""
     user_id = event.message.sender.user_id
     mid = event.message.body.mid
     chat_id = getattr(event.message.recipient, "chat_id", None) or user_id
@@ -115,12 +134,23 @@ async def _save_broadcast_source(event, context) -> None:
         broadcast_source_mid=mid,
         broadcast_source_chat_id=chat_id,
     )
+    await context.set_state(StaffState.AWAITING_BROADCAST_COUPON_CHOICE)
+    sent = await event.bot.send_message(
+        user_id=user_id,
+        text="Добавить купон к рассылке?",
+        attachments=[broadcast_coupon_choice_keyboard()],
+    )
+    await _append_step_mid(context, sent.message.mid)
+
+
+async def _ask_broadcast_recipients(bot, user_id: int, context) -> None:
     await context.set_state(StaffState.AWAITING_BROADCAST_RECIPIENTS)
-    await event.bot.send_message(
+    sent = await bot.send_message(
         user_id=user_id,
         text="Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
         attachments=[cancel_keyboard("broadcast:cancel_create")],
     )
+    await _append_step_mid(context, sent.message.mid)
 
 
 async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
@@ -128,6 +158,9 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
     mid = data.get("broadcast_source_mid")
     chat_id = data.get("broadcast_source_chat_id")
     recipient_ids = data.get("broadcast_recipient_ids", [])
+    coupon_value = data.get("broadcast_coupon_value")
+    coupon_days = data.get("broadcast_coupon_days")
+    coupon_pct = data.get("broadcast_coupon_pct")
 
     if not mid or not recipient_ids:
         await bot.send_message(user_id=user_id, text="Ошибка: нет данных для рассылки.")
@@ -147,6 +180,9 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
                     scheduled_at=scheduled_at,
                     recipient_count=len(recipient_ids),
                     status="pending",
+                    coupon_value=coupon_value,
+                    coupon_validity_days=coupon_days,
+                    coupon_max_payment_pct=coupon_pct,
                 )
                 await broadcast_model.create_recipients(session, b.id, recipient_ids)
     except Exception:
@@ -155,9 +191,11 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
         return
 
     await context.set_state(RegistrationState.REGISTERED)
+    await _delete_step_mids(bot, context)
     dt_local = scheduled_at.astimezone(_PERM_TZ).strftime("%d.%m.%Y %H:%M")
+    coupon_suffix = f" + купон на {coupon_value} ₽" if coupon_value else ""
     await bot.send_message(
         user_id=user_id,
-        text=f"Рассылка #{b.id} запланирована на {dt_local}. Получателей: {len(recipient_ids)}.",
+        text=f"Рассылка #{b.id} запланирована на {dt_local}. Получателей: {len(recipient_ids)}{coupon_suffix}.",
         attachments=[superuser_keyboard()],
     )

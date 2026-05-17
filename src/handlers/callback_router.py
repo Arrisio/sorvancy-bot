@@ -43,11 +43,28 @@ from src.keyboards import (
 )
 from src.handlers.registration import _format_confirmation, _parse_date
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _create_broadcast, _parse_scheduled_at, _nearest_window_slot
+from src.handlers.broadcast import _create_broadcast, _parse_scheduled_at, _nearest_window_slot, _ask_broadcast_recipients
 from src.handlers.staff import _send_customer_profile_by_id
 from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
+
+
+async def _append_step_mid(context: MemoryContext, mid: str) -> None:
+    data = await context.get_data()
+    mids = list(data.get("step_mids") or [])
+    mids.append(mid)
+    await context.update_data(step_mids=mids)
+
+
+async def _delete_step_mids(bot, context: MemoryContext) -> None:
+    data = await context.get_data()
+    for mid in (data.get("step_mids") or []):
+        try:
+            await bot.delete_message(message_id=mid)
+        except Exception:
+            pass
+    await context.update_data(step_mids=[])
 
 
 async def register_callback_router(dp):
@@ -104,11 +121,20 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
         async with get_session_factory()() as session:
             async with session.begin():
                 await staff_model.delete(session, staff_id)
-        await bot.send_message(user_id=user_id, text="Продавец удалён.")
+        await bot.send_message(
+            user_id=user_id, text="Продавец удалён.", attachments=[superuser_keyboard()]
+        )
         return
 
     if payload == "seller:cancel_delete":
         await bot.send_message(user_id=user_id, text="Удаление отменено.")
+        return
+
+    # Scenario 10: cancel customer ID lookup
+    if payload == "find_customer:cancel":
+        await context.set_state(RegistrationState.REGISTERED)
+        kb = superuser_keyboard() if staff.is_owner else staff_keyboard()
+        await bot.send_message(user_id=user_id, text="Отменено.", attachments=[kb])
         return
 
     # Scenario 07: edit discount
@@ -195,14 +221,46 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
         return
 
     if payload == "coupon:issue_cancel":
+        data = await context.get_data()
+        coupon_ctx = data.get("coupon_context", "seller")
         await context.set_state(RegistrationState.REGISTERED)
-        await bot.send_message(user_id=user_id, text="Выдача купона отменена.")
+        if coupon_ctx == "broadcast":
+            await context.update_data(coupon_context=None)
+            await _delete_step_mids(bot, context)
+            await bot.send_message(user_id=user_id, text="Рассылка отменена.", attachments=[superuser_keyboard()])
+        else:
+            customer_id = data.get("coupon_target_customer_id")
+            if state in (StaffState.AWAITING_COUPON_DAYS, StaffState.AWAITING_COUPON_PCT) and customer_id:
+                await bot.send_message(user_id=user_id, text="Выдача отменена.")
+                await _send_customer_profile_by_id(bot, user_id, customer_id)
+            else:
+                await bot.send_message(user_id=user_id, text="Выдача купона отменена.")
         return
 
     # Broadcast callbacks (owner only)
     if staff.is_owner:
+        if payload == "broadcast:add_coupon":
+            if state != StaffState.AWAITING_BROADCAST_COUPON_CHOICE:
+                return
+            await context.update_data(coupon_context="broadcast")
+            await context.set_state(StaffState.AWAITING_COUPON_VALUE)
+            sent = await bot.send_message(
+                user_id=user_id,
+                text="Введите максимальную сумму купона (в рублях, 101–1000):",
+                attachments=[cancel_keyboard("coupon:issue_cancel")],
+            )
+            await _append_step_mid(context, sent.message.mid)
+            return
+
+        if payload == "broadcast:skip_coupon":
+            if state != StaffState.AWAITING_BROADCAST_COUPON_CHOICE:
+                return
+            await _ask_broadcast_recipients(bot, user_id, context)
+            return
+
         if payload == "broadcast:cancel_create":
             await context.set_state(RegistrationState.REGISTERED)
+            await _delete_step_mids(bot, context)
             await bot.send_message(
                 user_id=user_id, text="Рассылка отменена.",
                 attachments=[superuser_keyboard()],
@@ -219,6 +277,7 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
         if payload == "broadcast:cancel":
             if state not in (StaffState.AWAITING_BROADCAST_TIME, StaffState.AWAITING_BROADCAST_RECIPIENTS, StaffState.AWAITING_BROADCAST_MSG):
                 return
+            await _delete_step_mids(bot, context)
             await context.set_state(RegistrationState.REGISTERED)
             await bot.send_message(
                 user_id=user_id, text="Рассылка отменена.",
@@ -231,7 +290,11 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
             async with get_session_factory()() as session:
                 async with session.begin():
                     await broadcast_model.cancel(session, broadcast_id)
-            await bot.send_message(user_id=user_id, text="Рассылка отмечена как «Отменена».")
+            await bot.send_message(
+                user_id=user_id,
+                text="Рассылка отмечена как «Отменена».",
+                attachments=[superuser_keyboard()],
+            )
             return
 
 
@@ -260,6 +323,15 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
                 await bot.delete_message(message_id=mid)
             except Exception:
                 pass
+        if cust.survey_completed:
+            async with get_session_factory()() as session:
+                children = await child_model.get_by_customer(session, cust.id)
+            await bot.send_message(
+                user_id=user_id,
+                text=_profile_text(cust, children),
+                attachments=[profile_card_keyboard(cust.opt_out_marketing)],
+            )
+            return
         if cust.survey_draft and not cust.survey_completed:
             await bot.send_message(
                 user_id=user_id,
@@ -267,14 +339,15 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
                 attachments=[resume_survey_keyboard()],
             )
             return
-        await context.update_data(**{"draft.children": [], "draft.bought_for_self": False})
+        await context.update_data(**{"draft.children": [], "draft.bought_for_self": False, "step_mids": []})
         await context.set_state(RegistrationState.AWAITING_FIRST_NAME)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
             attachments=[cancel_keyboard("survey:cancel")],
         )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     if payload == "survey:resume":
@@ -296,7 +369,7 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
         await context.update_data(**restore_data)
         await context.set_state(resume_state)
         data = await context.get_data()
-        await _resend_survey_step(bot, user_id, resume_state, data)
+        await _resend_survey_step(bot, user_id, resume_state, data, context)
         return
 
     if payload == "survey:restart":
@@ -313,21 +386,20 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
             "draft.children": [],
             "draft.bought_for_self": False,
             "draft.phone": None,
+            "step_mids": [],
         })
         await context.set_state(RegistrationState.AWAITING_FIRST_NAME)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
             attachments=[cancel_keyboard("survey:cancel")],
         )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     if payload == "survey:cancel" and state == RegistrationState.AWAITING_FIRST_NAME:
-        try:
-            await bot.delete_message(message_id=event.message.body.mid)
-        except Exception:
-            pass
+        await _delete_step_mids(bot, context)
         await context.update_data(**{"draft.first_name": None, "draft.children": [], "draft.bought_for_self": False})
         await context.set_state(RegistrationState.REGISTERED)
         try:
@@ -336,6 +408,7 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
                     await customer_model.clear_survey_draft(session, user_id)
         except Exception:
             logger.warning("Failed to clear survey draft on cancel for user %s", user_id)
+        await bot.send_message(user_id=user_id, text="Главное меню.", attachments=[registered_keyboard()])
         return
 
     if payload == "survey:skip":
@@ -357,7 +430,7 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
         await context.set_state(RegistrationState.AWAITING_CONFIRMATION)
         await _persist_survey_draft(context, user_id)
         data = await context.get_data()
-        await _send_confirmation_card(bot, user_id, data)
+        await _send_confirmation_card(bot, user_id, data, context)
         return
 
     if payload == "back":
@@ -374,12 +447,13 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_CHILD_BIRTHDATE)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 2 из 3 · Когда день рождения у ребёнка? "
                  "Будем поздравлять! 🎉 (ДД.ММ.ГГГГ)",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
         return
 
     if state == RegistrationState.AWAITING_MORE_CHILDREN and payload.startswith("more_children:"):
@@ -389,29 +463,30 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
             await context.set_state(RegistrationState.AWAITING_CHILD_NAME)
             await _persist_survey_draft(context, user_id)
             if not children:
-                await bot.send_message(
+                sent = await bot.send_message(
                     user_id=user_id,
                     text="Шаг 4 из 4 · Как зовут вашего ребёнка?",
                     attachments=[buy_for_self_keyboard()],
                 )
             else:
-                await bot.send_message(
+                sent = await bot.send_message(
                     user_id=user_id,
                     text="Как зовут следующего ребёнка?",
                     attachments=[back_keyboard()],
                 )
+            await _append_step_mid(context, sent.message.mid)
         else:
             await context.set_state(RegistrationState.AWAITING_CONFIRMATION)
             await _persist_survey_draft(context, user_id)
             data = await context.get_data()
-            await _send_confirmation_card(bot, user_id, data)
+            await _send_confirmation_card(bot, user_id, data, context)
         return
 
     if state == RegistrationState.AWAITING_CONFIRMATION:
         if payload == "confirm:save":
             await context.set_state(RegistrationState.AWAITING_CONTACT)
             await _persist_survey_draft(context, user_id)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text=(
                     "Последний шаг — поделитесь контактом как запасным каналом связи. "
@@ -419,6 +494,7 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
                 ),
                 attachments=[contact_keyboard()],
             )
+            await _append_step_mid(context, sent.message.mid)
         elif payload.startswith("edit:"):
             field = payload[5:]
             await context.update_data(**{"draft.editing_field": field})
@@ -794,66 +870,73 @@ def _format_resume_message(draft: dict) -> str:
     return "\n".join(lines)
 
 
-async def _resend_survey_step(bot, user_id: int, state: str, data: dict) -> None:
+async def _resend_survey_step(bot, user_id: int, state: str, data: dict, context: MemoryContext) -> None:
     children = data.get("draft.children", [])
     n = len(children)
 
     if state == RegistrationState.AWAITING_FIRST_NAME:
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
             attachments=[cancel_keyboard("survey:cancel")],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_LAST_NAME:
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. "
                  "Можно пропустить 😊",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CHILD_NAME:
         if not children:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Шаг 4 из 4 · Как зовут вашего ребёнка?",
                 attachments=[buy_for_self_keyboard()],
             )
         else:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Как зовут следующего ребёнка?",
                 attachments=[back_keyboard()],
             )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CHILD_GENDER:
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? "
                  "Подберём подходящие предложения:",
             attachments=[gender_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 2 из 3 · Когда день рождения у ребёнка? "
                  "Будем поздравлять! 🎉 (ДД.ММ.ГГГГ)",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_MORE_CHILDREN:
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",
             attachments=[yes_no_keyboard("more_children:yes", "more_children:no")],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CONFIRMATION:
-        await _send_confirmation_card(bot, user_id, data)
+        await _send_confirmation_card(bot, user_id, data, context)
     elif state == RegistrationState.AWAITING_CONTACT:
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=(
                 "Последний шаг — поделитесь контактом как запасным каналом связи. "
@@ -861,16 +944,19 @@ async def _resend_survey_step(bot, user_id: int, state: str, data: dict) -> None
             ),
             attachments=[contact_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
 
 
-async def _send_confirmation_card(bot, user_id, data):
+async def _send_confirmation_card(bot, user_id, data, context: MemoryContext):
     children = data.get("draft.children", [])
     text = _format_confirmation(data)
-    await bot.send_message(
+    sent = await bot.send_message(
         user_id=user_id,
         text=text,
         attachments=[confirmation_card_keyboard(has_children=bool(children))],
     )
+    await _append_step_mid(context, sent.message.mid)
+    await context.update_data(confirmation_card_mid=sent.message.mid)
 
 
 async def _handle_survey_skip(bot, user_id, state, context):
@@ -878,11 +964,12 @@ async def _handle_survey_skip(bot, user_id, state, context):
         await context.update_data(**{"draft.last_name": None})
         await context.set_state(RegistrationState.AWAITING_CUSTOMER_BIRTHDATE)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
         await context.update_data(**{"draft.birthdate": None})
         data = await context.get_data()
@@ -890,17 +977,18 @@ async def _handle_survey_skip(bot, user_id, state, context):
         await context.set_state(RegistrationState.AWAITING_CHILD_NAME)
         await _persist_survey_draft(context, user_id)
         if not children:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Шаг 4 из 4 · Как зовут вашего ребёнка?",
                 attachments=[buy_for_self_keyboard()],
             )
         else:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Как зовут следующего ребёнка?",
                 attachments=[back_keyboard()],
             )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
         data = await context.get_data()
         children = data.get("draft.children", [])
@@ -910,11 +998,12 @@ async def _handle_survey_skip(bot, user_id, state, context):
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_MORE_CHILDREN)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",
             attachments=[yes_no_keyboard("more_children:yes", "more_children:no")],
         )
+        await _append_step_mid(context, sent.message.mid)
 
 
 async def _handle_survey_back(bot, user_id, state, context):
@@ -923,25 +1012,27 @@ async def _handle_survey_back(bot, user_id, state, context):
     if state == RegistrationState.AWAITING_LAST_NAME:
         await context.set_state(RegistrationState.AWAITING_FIRST_NAME)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
             attachments=[cancel_keyboard("survey:cancel")],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
         await context.set_state(RegistrationState.AWAITING_LAST_NAME)
         await _persist_survey_draft(context, user_id)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Шаг 2 из 4 · Расскажите свою фамилию. Можно пропустить 😊",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CHILD_NAME:
         children = data.get("draft.children", [])
         if children:
             await context.set_state(RegistrationState.AWAITING_MORE_CHILDREN)
             await _persist_survey_draft(context, user_id)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Хотите добавить ещё одного ребёнка?",
                 attachments=[yes_no_keyboard("more_children:yes", "more_children:no")],
@@ -949,11 +1040,12 @@ async def _handle_survey_back(bot, user_id, state, context):
         else:
             await context.set_state(RegistrationState.AWAITING_CUSTOMER_BIRTHDATE)
             await _persist_survey_draft(context, user_id)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Шаг 3 из 4 · Когда ваш день рождения? 🎂 (ДД.ММ.ГГГГ)",
                 attachments=[back_and_skip_keyboard()],
             )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CHILD_GENDER:
         children = data.get("draft.children", [])
         if children:
@@ -963,60 +1055,65 @@ async def _handle_survey_back(bot, user_id, state, context):
         await _persist_survey_draft(context, user_id)
         children_remaining = len(children)
         if children_remaining == 0:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Шаг 4 из 4 · Как зовут вашего ребёнка?",
                 attachments=[buy_for_self_keyboard()],
             )
         else:
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Как зовут следующего ребёнка?",
                 attachments=[back_keyboard()],
             )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
         await context.set_state(RegistrationState.AWAITING_CHILD_GENDER)
         await _persist_survey_draft(context, user_id)
         children = data.get("draft.children", [])
         n = len(children)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка?",
             attachments=[gender_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_MORE_CHILDREN:
         await context.set_state(RegistrationState.AWAITING_CHILD_BIRTHDATE)
         await _persist_survey_draft(context, user_id)
         children = data.get("draft.children", [])
         n = len(children)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text=f"Ребёнок {n} · шаг 2 из 3 · Когда день рождения у ребёнка? (ДД.ММ.ГГГГ)",
             attachments=[back_and_skip_keyboard()],
         )
+        await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CONFIRMATION:
         children = data.get("draft.children", [])
         if children:
             await context.set_state(RegistrationState.AWAITING_MORE_CHILDREN)
             await _persist_survey_draft(context, user_id)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Хотите добавить ещё одного ребёнка?",
                 attachments=[yes_no_keyboard("more_children:yes", "more_children:no")],
             )
+            await _append_step_mid(context, sent.message.mid)
         else:
             await context.set_state(RegistrationState.AWAITING_CUSTOMER_BIRTHDATE)
             await _persist_survey_draft(context, user_id)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Шаг 3 из 4 · Когда ваш день рождения? 🎂 (ДД.ММ.ГГГГ)",
                 attachments=[back_and_skip_keyboard()],
             )
+            await _append_step_mid(context, sent.message.mid)
     elif state == RegistrationState.AWAITING_CONTACT:
         await context.set_state(RegistrationState.AWAITING_CONFIRMATION)
         await _persist_survey_draft(context, user_id)
         data = await context.get_data()
-        await _send_confirmation_card(bot, user_id, data)
+        await _send_confirmation_card(bot, user_id, data, context)
 
 
 async def _complete_survey(bot, user_id, context):
@@ -1071,6 +1168,7 @@ async def _complete_survey(bot, user_id, context):
         return
 
     await context.set_state(RegistrationState.REGISTERED)
+    await _delete_step_mids(bot, context)
     await bot.send_message(
         user_id=user_id,
         text="Анкета заполнена! Спасибо 🎉",

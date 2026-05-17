@@ -266,6 +266,15 @@ def cancel_keyboard(cancel_payload: str = "cancel"):
     return builder.as_markup()
 
 
+def broadcast_coupon_choice_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="Добавить", payload="broadcast:add_coupon"),
+        CallbackButton(text="Пропустить", payload="broadcast:skip_coupon"),
+    )
+    return builder.as_markup()
+
+
 def broadcast_start_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(

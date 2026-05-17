@@ -124,6 +124,9 @@ class Broadcast(Base):
     failed_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    coupon_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    coupon_validity_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    coupon_max_payment_pct: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     creator: Mapped["Staff"] = relationship(back_populates="broadcasts")
     recipients: Mapped[list["BroadcastRecipient"]] = relationship(back_populates="broadcast")
