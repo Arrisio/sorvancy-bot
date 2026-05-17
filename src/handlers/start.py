@@ -20,7 +20,7 @@ from src.services.discount import make_qr_png
 
 logger = logging.getLogger(__name__)
 
-CUSTOMER_DEEPLINK_PREFIX = "customer_"
+SHOW_PROFILE_PREFIX = "show_profile_"
 
 
 async def register_start_handlers(dp):
@@ -36,11 +36,11 @@ async def register_start_handlers(dp):
         user_id = event.user.user_id
         username = getattr(event.user, "name", None)
 
-        # Check for deeplink payload — scenario 06 entry for staff
+        # Deeplink scenario 06: staff scans customer QR → show_profile_<id>
         payload = getattr(event, "payload", None) or getattr(event.user, "start_payload", None)
-        if payload and isinstance(payload, str) and payload.startswith(CUSTOMER_DEEPLINK_PREFIX):
+        if payload and isinstance(payload, str) and payload.startswith(SHOW_PROFILE_PREFIX):
             if route == "staff":
-                cid_str = payload[len(CUSTOMER_DEEPLINK_PREFIX):]
+                cid_str = payload[len(SHOW_PROFILE_PREFIX):]
                 try:
                     cid = int(cid_str)
                 except ValueError:
@@ -63,22 +63,6 @@ async def register_start_handlers(dp):
         sender = event.message.sender
         user_id = sender.user_id
         username = getattr(sender, "name", None)
-
-        # Deeplink via /start payload
-        text = event.message.body.text or ""
-        if " " in text:
-            payload = text.split(" ", 1)[1].strip()
-            if payload.startswith(CUSTOMER_DEEPLINK_PREFIX) and route == "staff":
-                cid_str = payload[len(CUSTOMER_DEEPLINK_PREFIX):]
-                try:
-                    cid = int(cid_str)
-                except ValueError:
-                    pass
-                else:
-                    from src.handlers.staff import _send_customer_profile_by_id
-                    await _send_customer_profile_by_id(event.bot, user_id, cid)
-                    return
-
         await _route_start(event.bot, user_id, username, context, staff, customer, route)
 
     @dp.message_created(F.message.body.text == DISCOUNT_BTN_TEXT)

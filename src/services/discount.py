@@ -67,7 +67,7 @@ def coupon_issued_notification(coupon) -> str:
 
 
 def customer_qr_deeplink(customer_id: int) -> str:
-    return f"{config.DEEPLINK_BASE}customer_{customer_id}"
+    return f"{config.DEEPLINK_BASE}?start=show_profile_{customer_id}"
 
 
 def make_qr_png(customer_id: int) -> bytes:

@@ -19,7 +19,7 @@ OWNER_MAX_USER_ID: int | None = (
 
 BROADCAST_SEND_DELAY_SECONDS: float = float(os.environ.get("BROADCAST_SEND_DELAY_SECONDS", 15))
 
-# Base URL for deeplinks embedded in customer QR codes.
-# Format: {DEEPLINK_BASE}customer_{customer_id}
-# E.g. https://max.ru/yourbotname?start=
+# Bot URL for deeplinks embedded in customer QR codes.
+# Format: https://max.ru/<botName>
+# Code appends ?start=show_profile_<customer_id>
 DEEPLINK_BASE: str = os.environ.get("DEEPLINK_BASE", "")
