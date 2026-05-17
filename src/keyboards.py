@@ -15,6 +15,7 @@ CONTACT_STAFF_BTN_TEXT = "Связаться с продавцом"
 STAFF_FIND_BTN_TEXT = "Найти профиль"
 EXCEL_BTN_TEXT = "Excel"
 STAFF_LIST_BTN_TEXT = "Показать продавцов"
+ADD_SELLER_BTN_TEXT = "Добавить продавца"
 BROADCAST_CREATE_BTN_TEXT = "Запустить рассылку"
 BROADCAST_LIST_BTN_TEXT = "Запланированные рассылки"
 
@@ -51,7 +52,7 @@ def superuser_keyboard():
     return ButtonsPayload(buttons=[
         [MessageButton(text=STAFF_FIND_BTN_TEXT)],
         [MessageButton(text=EXCEL_BTN_TEXT)],
-        [MessageButton(text=STAFF_LIST_BTN_TEXT)],
+        [MessageButton(text=STAFF_LIST_BTN_TEXT), MessageButton(text=ADD_SELLER_BTN_TEXT)],
         [MessageButton(text=BROADCAST_CREATE_BTN_TEXT)],
         [MessageButton(text=BROADCAST_LIST_BTN_TEXT)],
     ]).pack()
@@ -222,15 +223,6 @@ def confirm_coupon_keyboard(coupon_id: int):
     builder.row(
         CallbackButton(text="Да", payload=f"coupon:confirm:{coupon_id}"),
         CallbackButton(text="Нет", payload="coupon:cancel"),
-    )
-    return builder.as_markup()
-
-
-def confirm_add_seller_keyboard(max_user_id: int):
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        CallbackButton(text="Да", payload=f"seller:confirm:{max_user_id}"),
-        CallbackButton(text="Нет", payload="seller:cancel"),
     )
     return builder.as_markup()
 

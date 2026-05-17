@@ -23,3 +23,5 @@ BROADCAST_SEND_DELAY_SECONDS: float = float(os.environ.get("BROADCAST_SEND_DELAY
 # Format: https://max.ru/<botName>
 # Code appends ?start=show_profile_<customer_id>
 DEEPLINK_BASE: str = os.environ.get("DEEPLINK_BASE", "")
+
+INVITE_SECRET: str = os.environ.get("INVITE_SECRET", "")

@@ -33,7 +33,6 @@ from src.keyboards import (
     adding_child_back_keyboard,
     staff_profile_keyboard,
     confirm_coupon_keyboard,
-    confirm_add_seller_keyboard,
     delete_seller_keyboard,
     confirm_delete_seller_keyboard,
     cancel_keyboard,
@@ -81,31 +80,6 @@ async def register_callback_router(dp):
 
 async def _handle_staff_callback(event, context, staff, state, payload, user_id):
     bot = event.bot
-
-    # Scenario 04: add seller
-    if payload.startswith("seller:confirm:") and staff.is_owner:
-        max_user_id = int(payload.split(":")[-1])
-        data = await context.get_data()
-        async with get_session_factory()() as session:
-            async with session.begin():
-                await staff_model.create(
-                    session,
-                    max_user_id=max_user_id,
-                    username=data.get("pending_seller_username"),
-                    phone=data.get("pending_seller_phone"),
-                    first_name=data.get("pending_seller_first_name"),
-                    last_name=data.get("pending_seller_last_name"),
-                    is_owner=False,
-                )
-        fn = data.get("pending_seller_first_name") or ""
-        ln = data.get("pending_seller_last_name") or ""
-        name = " ".join(filter(None, [fn, ln])) or str(max_user_id)
-        await bot.send_message(user_id=user_id, text=f"Продавец {name} успешно добавлен.")
-        return
-
-    if payload == "seller:cancel":
-        await bot.send_message(user_id=user_id, text="Регистрация отменена.")
-        return
 
     # Scenario 09: manage sellers
     if payload.startswith("seller:delete:") and staff.is_owner:

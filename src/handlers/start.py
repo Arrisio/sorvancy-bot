@@ -16,7 +16,9 @@ from src.keyboards import (
 from src.db.orm import Staff, Customer
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
+from src.models import staff as staff_model
 from src.services.discount import make_qr_png
+from src.services.invite import verify_invite_token
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +38,60 @@ async def register_start_handlers(dp):
         user_id = event.user.user_id
         username = getattr(event.user, "name", None)
 
-        # Deeplink scenario 06: staff scans customer QR → show_profile_<id>
         payload = getattr(event, "payload", None) or getattr(event.user, "start_payload", None)
+
+        # Scenario 04: staff invite deep link
+        if payload and isinstance(payload, str) and not payload.startswith(SHOW_PROFILE_PREFIX):
+            owner_id, error = verify_invite_token(payload)
+            if error == "expired":
+                await event.bot.send_message(
+                    user_id=user_id,
+                    text="Ссылка устарела. Попросите владельца магазина выслать новую.",
+                )
+                return
+            if owner_id is not None:
+                async with get_session_factory()() as session:
+                    existing = await staff_model.get_by_max_id(session, user_id)
+                first_name = getattr(event.user, "first_name", None) or getattr(event.user, "name", None)
+                last_name = getattr(event.user, "last_name", None)
+                name = " ".join(filter(None, [first_name or "", last_name or ""])) or str(user_id)
+                if existing:
+                    await event.bot.send_message(
+                        user_id=user_id,
+                        text="Вы уже зарегистрированы как продавец.",
+                    )
+                    try:
+                        await event.bot.send_message(
+                            user_id=owner_id,
+                            text="Продавец уже зарегистрирован.",
+                        )
+                    except Exception:
+                        logger.warning("Could not notify owner %s of duplicate seller", owner_id)
+                    return
+                async with get_session_factory()() as session:
+                    async with session.begin():
+                        await staff_model.create(
+                            session,
+                            max_user_id=user_id,
+                            username=username,
+                            first_name=first_name,
+                            last_name=last_name,
+                            is_owner=False,
+                        )
+                await event.bot.send_message(
+                    user_id=user_id,
+                    text="Вы зарегистрированы как продавец магазина «Сорванцы».",
+                )
+                try:
+                    await event.bot.send_message(
+                        user_id=owner_id,
+                        text=f"Продавец {name} зарегистрирован.",
+                    )
+                except Exception:
+                    logger.warning("Could not notify owner %s of new seller", owner_id)
+                return
+
+        # Deeplink scenario 06: staff scans customer QR → show_profile_<id>
         if payload and isinstance(payload, str) and payload.startswith(SHOW_PROFILE_PREFIX):
             if route == "staff":
                 cid_str = payload[len(SHOW_PROFILE_PREFIX):]

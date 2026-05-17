@@ -10,16 +10,17 @@ from maxapi.context import MemoryContext
 
 from src.states import StaffState, RegistrationState
 from src.keyboards import (
-    confirm_add_seller_keyboard,
     delete_seller_keyboard,
     STAFF_FIND_BTN_TEXT,
     STAFF_LIST_BTN_TEXT,
+    ADD_SELLER_BTN_TEXT,
 )
 from src.db.connection import get_session_factory
 from src.models import staff as staff_model
 from src.models import customer as customer_model
 from src.models import coupon as coupon_model
 from src.services.discount import staff_customer_profile_message
+from src.services.invite import make_invite_token, staff_invite_deeplink
 from src.keyboards import staff_profile_keyboard
 from src.db.orm import Staff, Customer
 
@@ -35,8 +36,7 @@ logger = logging.getLogger(__name__)
 
 async def register_staff_handlers(dp):
 
-    # Scenario 04: contact card from superuser → register new seller
-    # Also handles customer contact sharing during survey (scenario 02, step 10 Path A)
+    # Survey contact path: customer shares phone during registration (scenario 02)
     @dp.message_created(F.message.body.attachments)
     async def on_contact_card(
         event: MessageCreated,
@@ -45,70 +45,43 @@ async def register_staff_handlers(dp):
         customer: Customer | None = None,
         route: str = "registration",
     ):
-        # Survey contact path: customer shares phone in AWAITING_CONTACT
-        if route == "customer":
-            state = await context.get_state()
-            if state == RegistrationState.AWAITING_CONTACT:
-                user_id = event.message.sender.user_id
-                attachments = event.message.body.attachments or []
-                contact = None
-                for att in attachments:
-                    if hasattr(att, "type") and getattr(att, "type", "") == "contact":
-                        contact = att
-                        break
-                if contact is not None:
-                    vcf_info = getattr(getattr(contact, "payload", None), "vcf_info", None)
-                    phone = _phone_from_vcf(vcf_info)
-                    if phone:
-                        await context.update_data(**{"draft.phone": phone})
-                    from src.handlers.callback_router import _complete_survey
-                    await _complete_survey(event.bot, user_id, context)
-                else:
-                    logger.warning("No contact attachment in AWAITING_CONTACT event for user %s", user_id)
+        if route != "customer":
             return
-
-        if route != "staff" or staff is None or not staff.is_owner:
+        state = await context.get_state()
+        if state != RegistrationState.AWAITING_CONTACT:
             return
+        user_id = event.message.sender.user_id
         attachments = event.message.body.attachments or []
         contact = None
         for att in attachments:
-            if hasattr(att, "user_id") or (
-                hasattr(att, "type") and getattr(att, "type", "") == "contact"
-            ):
+            if hasattr(att, "type") and getattr(att, "type", "") == "contact":
                 contact = att
                 break
-        if contact is None:
+        if contact is not None:
+            vcf_info = getattr(getattr(contact, "payload", None), "vcf_info", None)
+            phone = _phone_from_vcf(vcf_info)
+            if phone:
+                await context.update_data(**{"draft.phone": phone})
+            from src.handlers.callback_router import _complete_survey
+            await _complete_survey(event.bot, user_id, context)
+        else:
+            logger.warning("No contact attachment in AWAITING_CONTACT event for user %s", user_id)
+
+    # Scenario 04: generate invite deep link for new seller
+    @dp.message_created(F.message.body.text == ADD_SELLER_BTN_TEXT)
+    async def on_add_seller_btn(
+        event: MessageCreated,
+        context: MemoryContext,
+        staff: Staff | None = None,
+        route: str = "registration",
+    ):
+        if route != "staff" or staff is None or not staff.is_owner:
             return
-
-        max_user_id = getattr(contact, "user_id", None) or getattr(contact, "max_user_id", None)
-        if not max_user_id:
-            await event.message.answer("Не удалось извлечь данные из карточки контакта.")
-            return
-
-        phone = getattr(contact, "phone", None)
-        first_name = getattr(contact, "first_name", None) or getattr(contact, "name", None)
-        last_name = getattr(contact, "last_name", None)
-        username = getattr(contact, "username", None)
-
-        async with get_session_factory()() as session:
-            existing = await staff_model.get_by_max_id(session, max_user_id)
-        if existing:
-            await event.message.answer(
-                f"Продавец {first_name or max_user_id} уже зарегистрирован."
-            )
-            return
-
-        await context.update_data(
-            pending_seller_max_id=max_user_id,
-            pending_seller_phone=phone,
-            pending_seller_first_name=first_name,
-            pending_seller_last_name=last_name,
-            pending_seller_username=username,
-        )
-        name = " ".join(filter(None, [first_name, last_name])) or str(max_user_id)
+        token = make_invite_token(staff.max_user_id)
+        link = staff_invite_deeplink(token)
         await event.message.answer(
-            f"Добавить {name} как нового продавца?",
-            attachments=[confirm_add_seller_keyboard(max_user_id)],
+            f"Перешлите это сообщение продавцу, которого хотите добавить. "
+            f"Ссылка действует сегодня и завтра.\n\n{link}"
         )
 
     # Scenario 09: list all sellers
