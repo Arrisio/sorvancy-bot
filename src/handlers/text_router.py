@@ -20,6 +20,9 @@ from src.models import staff as staff_model
 from src.models import broadcast as broadcast_model
 from src.keyboards import (
     registered_keyboard,
+    unregistered_keyboard,
+    staff_keyboard,
+    superuser_keyboard,
     back_keyboard,
     back_and_skip_keyboard,
     gender_keyboard,
@@ -60,7 +63,7 @@ async def register_text_router(dp):
             return
 
         # --- Customer / registration routes ---
-        await _handle_customer_text(event, context, customer, state, text, user_id)
+        await _handle_customer_text(event, context, customer, state, text, user_id, route)
 
 
 async def _handle_staff_text(event, context, staff, state, text, user_id):
@@ -242,8 +245,17 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         await context.set_state(RegistrationState.REGISTERED)
         return
 
+    # Fallback: unrecognised message in idle state
+    if state in (RegistrationState.REGISTERED, None):
+        kb = superuser_keyboard() if staff.is_owner else staff_keyboard()
+        await bot.send_message(
+            user_id=user_id,
+            text="Извините, я глупый бот и вас не понял, но вы можете явно выбрать одно из следующих действий.",
+            attachments=[kb],
+        )
 
-async def _handle_customer_text(event, context, customer, state, text, user_id):
+
+async def _handle_customer_text(event, context, customer, state, text, user_id, route="customer"):
     bot = event.bot
 
     # Survey states
@@ -493,3 +505,12 @@ async def _handle_customer_text(event, context, customer, state, text, user_id):
             attachments=[child_card_keyboard(child_id)],
         )
         return
+
+    # Fallback: unrecognised message in idle state
+    if state in (RegistrationState.REGISTERED, None):
+        kb = unregistered_keyboard() if route == "registration" else registered_keyboard()
+        await bot.send_message(
+            user_id=user_id,
+            text="Извините, я глупый бот и вас не понял, но вы можете явно выбрать одно из следующих действий.",
+            attachments=[kb],
+        )
