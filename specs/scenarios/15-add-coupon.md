@@ -34,9 +34,9 @@ Customer receives new coupon and notification of issuance.
    Buttons: [Отмена]
 
 3. Seller types integer 101–1000 → stored as `coupon_draft.value`.
-4. Bot asks: «Срок действия купона (в днях, минимум 7):»
+4. Bot asks: «Срок действия купона (в днях, минимум 7):» + button [Отмена]
 5. Seller types integer ≥ 7 → `coupon_draft.validity_days`; `valid_until = now() + validity_days days`.
-6. Bot asks: «Максимальный процент от покупки, который можно оплатить купоном (1–100):»
+6. Bot asks: «Максимальный процент от покупки, который можно оплатить купоном (1–100):» + button [Отмена]
 7. Seller types integer 1–100 → `coupon_draft.max_payment_pct`.
 8. Bot saves Coupon to DB: `type=seller`, plus drafted value/valid_until/max_payment_pct.
 9. Bot sends customer notification (see Notification section).
@@ -52,6 +52,9 @@ Bot sends customer:
 
 ### A1: Seller clicks [Отмена] at step 2
 - No DB write; scenario ends; profile message unchanged.
+
+### A2: Seller clicks [Отмена] at step 4 or 6
+- No DB write; scenario ends; bot sends customer profile (scenario 06 format).
 
 ## Negative scenarios
 

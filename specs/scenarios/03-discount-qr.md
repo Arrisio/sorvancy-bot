@@ -17,7 +17,7 @@ User clicks "Скидка" button.
 
 1. Bot loads Customer from DB by `max_user_id`
 2. Bot generates QR PNG encoding Max Messenger deeplink containing customer identifier
-3. Bot sends message with QR image, customer number, discount percent, deeplink URL, and link label:
+3. Bot sends message with QR image, customer number, discount percent, deeplink URL, and link label (+ `registered_keyboard`):
    ```
    Покажите этот QR-код продавцу
    Номер клиента: {customer.id}

@@ -18,7 +18,7 @@ Superuser clicks «Excel» button.
 1. Superuser clicks «Excel»
 2. Bot queries all Customers with their Children and active Coupons
 3. Bot generates `.xlsx` file
-4. Bot sends file as attachment in reply message
+4. Bot sends file as attachment in reply message; bot sends `superuser_keyboard`
 
 ## File structure
 

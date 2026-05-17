@@ -15,8 +15,10 @@ Superuser clicks «Запустить рассылку» button.
 
 ## Main flow
 
+Bot records message ID of each prompt in `step_mids` (MemoryContext); all deleted on confirmation (step 9) or any [Отмена] branch.
+
 1. Superuser clicks «Запустить рассылку»
-2. Bot sends: «Пришлите сообщение для рассылки»
+2. Bot sends: «Пришлите сообщение для рассылки» + button [Отмена]
 3. Superuser sends message with broadcast content — any message type is accepted: text, photo, file, video, audio, sticker, or any other supported attachment; the original message is saved by reference
 4. Bot saves reference to original message (will be forwarded to each recipient via Forward — not re-sent as new message; attachments preserved automatically); sends: «Пришлите номера клиентов для рассылки» + inline button [Отмена]
 5. Superuser sends recipient list as text — Customer IDs separated by any delimiter (whitespace, comma, semicolon); parsed by same shared utility as birthdate input (`_parse_date` pattern — split on any non-digit)
@@ -26,13 +28,16 @@ Superuser clicks «Запустить рассылку» button.
    - Clicks [Начать в ближайшее время] → `scheduled_at` = nearest available window slot (see nfr/broadcast-delivery.md §Broadcast window); Broadcast status → `pending`
    - Sends date only (e.g. «25.06») → `scheduled_at = that date at BROADCAST_WINDOW_START_HOUR:00`; Broadcast status → `pending`
    - Sends date + time (e.g. «25.06 14:30») → validates time falls within broadcast window; if valid: `scheduled_at = that datetime`, Broadcast status → `pending`; if invalid: → N1
-   - Clicks [Отмена] → scenario ends; no Broadcast record created
-9. Bot confirms: «Рассылка #{id} запланирована на {DD.MM.YYYY HH:MM}. Получателей: {count}.»
+   - Clicks [Отмена] → scenario ends; no Broadcast record created; bot deletes `step_mids`; bot sends `superuser_keyboard`
+9. Bot confirms: «Рассылка #{id} запланирована на {DD.MM.YYYY HH:MM}. Получателей: {count}.»; bot deletes FSM prompt messages (`step_mids`); bot sends `superuser_keyboard`
 
 ## Alternative flows
 
-### A1: Superuser clicks [Отмена] at step 4
-- Scenario ends; no Broadcast record created.
+### A1: Superuser clicks [Отмена] at step 2
+- Scenario ends; no Broadcast record created; bot deletes `step_mids`; bot sends `superuser_keyboard`.
+
+### A2: Superuser clicks [Отмена] at step 4
+- Scenario ends; no Broadcast record created; bot deletes `step_mids`; bot sends `superuser_keyboard`.
 
 ## Negative scenarios
 

@@ -17,12 +17,17 @@ Seller clicks "Изменить % скидки" button on customer profile messa
 
 ## Main flow
 
-1. Bot sends seller: «Введите новое значение скидки (0–30):»
+1. Bot sends seller: «Введите новое значение скидки (0–30):» + button [Отмена]
 2. Seller enters integer in range [0, 30]
 3. Bot updates `Customer.discount_percent` in DB
 4. Bot sends seller: «Скидка изменена: ~~[старое]%~~ → [новое]%» (old value strikethrough, HTML format)
 5. Bot sends customer: «Ваша скидка изменена: ~~[старое]%~~ → [новое]%» (old value strikethrough, HTML format)
 6. Bot sends seller updated customer profile (scenario 06 format)
+
+## Alternative flows
+
+### A1: Seller clicks [Отмена]
+- No DB write; scenario ends.
 
 ## Negative scenarios
 
@@ -39,4 +44,4 @@ Seller clicks "Изменить % скидки" button on customer profile messa
 
 ## Open questions
 - [ ] Is "Изменить % скидки" restricted to `is_owner = true`, or available to all Staff?
-- [ ] Seller abandons input (no reply): timeout or cancel behavior?
+- [x] Seller abandons input: resolved — [Отмена] button on prompt (step 1); no timeout needed.

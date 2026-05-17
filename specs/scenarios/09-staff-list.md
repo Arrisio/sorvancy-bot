@@ -20,7 +20,7 @@ Superuser clicks «Показать список продавцов» button.
 3. Superuser clicks «Удалить» on a seller's message
 4. Bot sends confirmation prompt to superuser
 5. Superuser confirms deletion
-6. Bot deletes Staff record from DB
+6. Bot deletes Staff record from DB; bot sends success message (wording TBD — see Open questions); bot sends `superuser_keyboard`
 
 ## Alternative flows
 

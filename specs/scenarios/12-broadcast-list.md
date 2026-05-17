@@ -19,7 +19,7 @@ Superuser clicks «Запланированные рассылки» button.
 2. Bot retrieves pending broadcasts
 3. Bot sends one message per broadcast; each message contains broadcast details + inline button [Отменить]
 4. Superuser clicks [Отменить] on a broadcast
-5. Bot sets Broadcast status → `cancelled`; bot sends: «Рассылка отмечена как "Отменена"»
+5. Bot sets Broadcast status → `cancelled`; bot sends: «Рассылка отмечена как "Отменена"»; bot sends `superuser_keyboard`
 
 ## Negative scenarios
 

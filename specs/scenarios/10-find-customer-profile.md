@@ -16,14 +16,15 @@ Staff clicks «Найти профиль» button.
 ## Main flow
 
 1. Staff clicks «Найти профиль»
-2. Bot sends: «Пришлите номер клиента»
+2. Bot sends: «Пришлите номер клиента» + button [Отмена]
 3. Staff sends Customer ID (text message)
 4. Bot loads Customer from DB by provided ID
 5. Bot sends customer profile card (same format as scenario 06, step 3)
 
 ## Alternative flows
 
-*(none)*
+### A1: Staff clicks [Отмена]
+- Scenario ends; bot sends actor-appropriate keyboard (`staff_keyboard` or `superuser_keyboard`).
 
 ## Negative scenarios
 

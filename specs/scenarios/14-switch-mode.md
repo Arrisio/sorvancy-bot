@@ -19,9 +19,9 @@ Superuser sends `/mode` command.
 1. Superuser sends `/mode`
 2. Bot toggles `Staff.customer_mode`: `false → true` or `true → false`
 3. Bot saves updated flag to DB
-4. Bot responds with current state:
-   - If `customer_mode` now `true`: «Режим клиента включён. Ваши сообщения обрабатываются как от покупателя.»
-   - If `customer_mode` now `false`: «Режим суперпользователя восстановлен.»
+4. Bot responds with current state and sends actor-appropriate keyboard:
+   - If `customer_mode` now `true`: «Режим клиента включён. Ваши сообщения обрабатываются как от покупателя.» + `registered_keyboard`
+   - If `customer_mode` now `false`: «Режим суперпользователя восстановлен.» + `superuser_keyboard`
 
 ## Postconditions
 - `Staff.customer_mode` updated in DB
