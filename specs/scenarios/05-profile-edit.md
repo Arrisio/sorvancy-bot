@@ -172,7 +172,7 @@ Back within add-child sub-form:
 - [👶 Управление детьми] available
 - Adding child with birthdate → if survey_completed transitions False → True: create Coupon (same rule as scenario 02)
 
-### A5: Survey never started (no fields filled, no draft)
+### A5: Survey never started (`survey_completed = false` AND `survey_draft IS NULL`)
 - Bot sends simplified profile message:
 
 ```
@@ -188,7 +188,7 @@ Back within add-child sub-form:
 - No field edit buttons shown
 
 ### A6: Survey started but not completed
-- Condition: `survey_completed = false` AND survey was started but not cancelled (draft or FSM state in SURVEY_STATES)
+- Condition: `survey_completed = false` AND `customer.survey_draft IS NOT NULL`
 - Bot sends simplified profile message:
 
 ```
@@ -228,6 +228,6 @@ Back within add-child sub-form:
 - [ ] Profile card update method: edit existing message in place (requires storing `profile_mid` in session) or send new message? Max messenger API support for editMessageText needed.
 - [ ] Children list: show child age (computed from birthdate)? Shown in 7a example — confirm.
 - [ ] Max children per customer: no limit defined. Confirm.
-- [ ] A5 trigger condition: "never started" = `first_name IS NULL`? Or `survey_completed = false` AND all fields null? Define exact DB check.
-- [ ] A6 detection: "survey in progress" requires FSM state ∈ SURVEY_STATES or draft keys in MemoryContext. MemoryContext is lost on bot restart — after restart, in-progress and never-started cases become indistinguishable without a DB flag. Decide: add `survey_started_at` DB column, or treat post-restart as "never started"?
-- [ ] A6 resume behavior: [Продолжить заполнение анкеты] jumps directly to last unanswered step, or first shows A2 summary card (scenario 02) with [▶️ Продолжить] and [🔄 Начать заново] options?
+- [x] A5/A6 trigger condition: resolved — A5 = `survey_draft IS NULL AND survey_completed = false`; A6 = `survey_draft IS NOT NULL AND survey_completed = false`
+- [x] A6 detection: resolved — check `customer.survey_draft IS NOT NULL` (JSONB field; survives bot restart)
+- [x] A6 resume behavior: resolved — [Продолжить заполнение анкеты] triggers scenario 02 A2 summary card ([▶️ Продолжить] / [🔄 Начать заново])

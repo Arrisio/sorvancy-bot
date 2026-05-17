@@ -18,6 +18,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 | discount_percent | int | not null, default 10 | Set from `config.DISCOUNT_PERCENT` at creation |
 | registered_at | timestamptz | not null, default now() | Phase 1 completion time |
 | opt_out_marketing | boolean | not null, default false | Customer opted out of personal offers; excludes from all Broadcast recipient lists |
+| survey_draft | jsonb | nullable | Full survey context snapshot: FSM state + all `draft.*` keys; written at each step; null when not mid-survey |
 
 ## Invariants
 
@@ -26,6 +27,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 - discount_percent set from env config at creation; not recalculated
 - opt_out_marketing = true → Customer excluded from all Broadcast recipient lists; flag toggled by Customer from own profile
 - first_name, last_name, birthdate, phone: null until survey step populates them
+- survey_draft: populated at each survey step with full context (FSM state + collected data); null means survey not started or was cancelled; cleared on completion or cancellation
 
 ## Survey completion signal
 

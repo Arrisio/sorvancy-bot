@@ -18,7 +18,7 @@ User clicks «Заполнить анкету» button (payload `survey:start`).
 
 ## Draft model
 
-All answers accumulated in MemoryContext (`draft.*` keys) during survey. Single DB write at step 10 (contact step). No partial DB writes mid-flow. Children exist only in draft until confirmation → save.
+All answers accumulated in MemoryContext (`draft.*` keys) during survey. At each FSM state transition, full context (FSM state + all `draft.*` keys) written to `customer.survey_draft` (JSONB) in DB — survives bot restart. Final profile data written to Customer fields in single transaction at step 10. `survey_draft` cleared (set null) on completion or cancellation. Children exist only in draft until step 10 → save.
 
 ## Main flow
 
@@ -35,7 +35,7 @@ Progress shown in each message: «Шаг N из 4» for customer steps; «Реб
 | 7 | AWAITING_CHILD_BIRTHDATE | Store `birthdate` into current child draft (null if skipped). Set AWAITING_MORE_CHILDREN. «Ребёнок N · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?» + [Да] [Нет] | Clicks button |
 | 8 | AWAITING_MORE_CHILDREN | **Да** → new child draft entry, set AWAITING_CHILD_NAME, go to step 5. **Нет** → set AWAITING_CONFIRMATION, send confirmation card (see section below). | Clicks button on confirmation card |
 | 9 | AWAITING_CONFIRMATION | User reviews draft. May edit fields inline (see section below). On [✅ Сохранить] → set AWAITING_CONTACT, send contact prompt. | Clicks Сохранить or edits |
-| 10 | AWAITING_CONTACT | **Path A — contact shared:** bot receives contact event from Max API → extract phone → store `draft.phone` → write all draft data to DB in single transaction (including phone). **Path B — [Завершить]:** write all draft data to DB (phone = null). Both paths: compute `survey_completed`; set REGISTERED; send «Анкета заполнена! Спасибо 🎉»; if False → True trigger scenario 15 (Add Coupon). | Clicks [📞 Запрос контактов] and shares phone, or clicks [Завершить] |
+| 10 | AWAITING_CONTACT | **Path A — contact shared:** bot receives contact event from Max API → extract phone → store `draft.phone` → write all draft data to Customer fields in single transaction (including phone). **Path B — [Завершить]:** write all draft data to DB (phone = null). Both paths: compute `survey_completed`; clear `customer.survey_draft`; set REGISTERED; send «Анкета заполнена! Спасибо 🎉»; if False → True trigger scenario 15 (Add Coupon). | Clicks [📞 Запрос контактов] and shares phone, or clicks [Завершить] |
 
 ## Confirmation card (step 8 → AWAITING_CONFIRMATION)
 
@@ -122,7 +122,7 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 
 | Current state | Back navigates to |
 |--------------|------------------|
-| AWAITING_NAME | **[Отмена]** — delete current question message, discard draft, set REGISTERED. No confirmation prompt. |
+| AWAITING_NAME | **[Отмена]** — delete current question message, discard draft, clear `customer.survey_draft`, set REGISTERED. No confirmation prompt. |
 | AWAITING_LAST_NAME | AWAITING_NAME — re-ask name |
 | AWAITING_CUSTOMER_BIRTHDATE | AWAITING_LAST_NAME — re-ask last name |
 | AWAITING_CHILD_NAME (child index=1) | AWAITING_CUSTOMER_BIRTHDATE |
@@ -143,7 +143,8 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 - State unchanged, user retries
 
 ### A2: Resume interrupted survey
-- Trigger: user clicks «Заполнить анкету» when survey_completed = false and draft or partial data exists
+- Trigger: user clicks «Заполнить анкету» (payload `survey:start`) OR «Продолжить заполнение анкеты» (payload `survey:resume`) when `customer.survey_draft IS NOT NULL` and `survey_completed = false`
+- Bot restores draft from `customer.survey_draft` into MemoryContext
 - Bot sends:
   ```
   👋 Вы уже начали заполнять анкету!
@@ -154,8 +155,8 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 
   [▶️ Продолжить]  [🔄 Начать заново]
   ```
-- [▶️ Продолжить] → restore draft, set FSM to first unanswered step
-- [🔄 Начать заново] → clear draft, set AWAITING_NAME, go to step 1
+- [▶️ Продолжить] → set FSM to state stored in `survey_draft`, resume from that step
+- [🔄 Начать заново] → clear draft, clear `customer.survey_draft`, set AWAITING_NAME, go to step 1
 
 ### A3: «Купить для себя» (step 4, 0 children in draft)
 - Append `draft.bought_for_self = true`
@@ -195,6 +196,6 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 - pii.md: child birthdate, name, phone handling
 
 ## Open questions
-- [ ] Draft persistence across bot restarts: MemoryContext is lost on restart. Resume (A2) requires draft to survive. Options: write Customer fields immediately + hold children in draft; or persist draft JSON to DB. Decide before implementation.
+- [x] Draft persistence across bot restarts: resolved — full context persisted to `customer.survey_draft` (JSONB) at each step; restored to MemoryContext on resume.
 - [ ] Confirmation card editing: Max messenger API supports `editMessageText`? If not, bot must send new card message on each edit.
 - [ ] Re-running survey after survey_completed = True: redirect to profile editing scenario (05) or block?
