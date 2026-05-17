@@ -35,7 +35,7 @@ Progress shown in each message: «Шаг N из 4» for customer steps; «Реб
 | 7 | AWAITING_CHILD_BIRTHDATE | Store `birthdate` into current child draft (null if skipped). Set AWAITING_MORE_CHILDREN. «Ребёнок N · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?» + [Да] [Нет] | Clicks button |
 | 8 | AWAITING_MORE_CHILDREN | **Да** → new child draft entry, set AWAITING_CHILD_NAME, go to step 5. **Нет** → set AWAITING_CONFIRMATION, send confirmation card (see section below). | Clicks button on confirmation card |
 | 9 | AWAITING_CONFIRMATION | User reviews draft. May edit fields inline (see section below). On [✅ Сохранить] → set AWAITING_CONTACT, send contact prompt. | Clicks Сохранить or edits |
-| 10 | AWAITING_CONTACT | **Path A — contact shared:** bot receives contact event from Max API → extract phone → store `draft.phone` → write all draft data to Customer fields in single transaction (including phone). **Path B — [Завершить]:** write all draft data to DB (phone = null). Both paths: compute `survey_completed`; clear `customer.survey_draft`; set REGISTERED; send «Анкета заполнена! Спасибо 🎉»; if False → True trigger scenario 15 (Add Coupon). | Clicks [📞 Запрос контактов] and shares phone, or clicks [Завершить] |
+| 10 | AWAITING_CONTACT | **Path A — contact shared:** bot receives contact event from Max API → extract phone → store `draft.phone` → write all draft data to Customer fields in single transaction (including phone). **Path B — [Завершить]:** write all draft data to DB (phone = null). Both paths: set `survey_completed = True`; clear `customer.survey_draft`; set REGISTERED; send «Анкета заполнена! Спасибо 🎉»; if False → True trigger scenario 15 (Add Coupon). | Clicks [📞 Запрос контактов] and shares phone, or clicks [Завершить] |
 
 ## Confirmation card (step 8 → AWAITING_CONFIRMATION)
 
@@ -188,7 +188,7 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
   - Customer.first_name, last_name, birthdate, phone updated
   - Customer.survey_completed set (see rule below)
   - 0..N Child records created, linked to Customer
-- survey_completed = True if: bought_for_self path OR ≥1 child with birthdate NOT NULL
+- survey_completed = True upon successful completion of step 10 (Path A or Path B), regardless of children or birthdate
 - Scenario 15 (Add Coupon) triggered if survey_completed changes False → True; coupon parameters and customer notification defined there
 - FSM state = REGISTERED
 

@@ -826,8 +826,7 @@ async def _complete_survey(bot, user_id, context):
     from src.models import child as child_model_mod
     data = await context.get_data()
     children_draft = data.get("draft.children", [])
-    bought_for_self = data.get("draft.bought_for_self", False)
-    survey_completed = bought_for_self or any(ch.get("birthdate") for ch in children_draft)
+    survey_completed = True
 
     first_name = data.get("draft.first_name") or ""
     last_name = data.get("draft.last_name")
