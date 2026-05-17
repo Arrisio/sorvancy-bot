@@ -1,7 +1,7 @@
 # Scenario: Profile Editing
 
 ## Goal
-Registered user views and edits their profile fields and children list at any time after survey completion.
+Registered user views their profile; if questionnaire not started — offered to fill it; otherwise edits profile fields and children list.
 
 ## Actors
 - User (registered, survey_completed = true or false)
@@ -19,7 +19,9 @@ User clicks «Мой профиль» button in registered keyboard (payload `pr
 
 ### Profile card
 
-1. Bot sends profile card message:
+1. Bot checks if questionnaire started (see A5 for unfilled case).
+
+2. Bot sends profile card message:
 
 ```
 👤 Ваш профиль
@@ -165,10 +167,25 @@ Back within add-child sub-form:
 - Profile card: no children section; [👶 Управление детьми] still shown
 - Children list shows: «У вас пока нет детей в профиле.» + [➕ Добавить ребёнка] + [← Назад к профилю]
 
-### A4: survey_completed = false (user has partial profile)
+### A4: survey_completed = false, partial data present
 - Profile card shown with whatever data exists (fields show «не указано» for null)
 - [👶 Управление детьми] available
 - Adding child with birthdate → if survey_completed transitions False → True: create Coupon (same rule as scenario 02)
+
+### A5: Questionnaire never started (no fields filled)
+- Bot sends simplified profile message:
+
+```
+👤 Ваш профиль
+
+Анкета не заполнена
+
+[Заполнить анкету]
+[← Главное меню]
+```
+
+- [Заполнить анкету] triggers scenario 02 (survey)
+- No field edit buttons shown
 
 ## MemoryContext keys during profile editing
 
@@ -195,3 +212,4 @@ Back within add-child sub-form:
 - [ ] Profile card update method: edit existing message in place (requires storing `profile_mid` in session) or send new message? Max messenger API support for editMessageText needed.
 - [ ] Children list: show child age (computed from birthdate)? Shown in 7a example — confirm.
 - [ ] Max children per customer: no limit defined. Confirm.
+- [ ] A5 trigger condition: "never started" = `first_name IS NULL`? Or `survey_completed = false` AND all fields null? Define exact DB check.
