@@ -269,7 +269,7 @@ def cancel_keyboard(cancel_payload: str = "cancel"):
 def broadcast_start_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(
-        CallbackButton(text="Начать сейчас", payload="broadcast:now"),
+        CallbackButton(text="Начать в ближайшее время", payload="broadcast:soonest"),
         CallbackButton(text="Отмена", payload="broadcast:cancel"),
     )
     return builder.as_markup()

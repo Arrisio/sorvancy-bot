@@ -2,17 +2,14 @@
 Broadcast reply-keyboard button handlers (scenarios 11, 12).
 Text and callback handling is in text_router.py and callback_router.py.
 """
-import asyncio
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 _PERM_TZ = ZoneInfo("Asia/Yekaterinburg")
 
 from maxapi.types import MessageCreated
-from maxapi.types.message import NewMessageLink
-from maxapi.enums.message_link_type import MessageLinkType
 from maxapi.filters import F
 from maxapi.context import MemoryContext
 
@@ -33,6 +30,22 @@ import config
 logger = logging.getLogger(__name__)
 
 
+def _in_window(dt: datetime) -> bool:
+    local = dt.astimezone(_PERM_TZ)
+    return config.BROADCAST_WINDOW_START_HOUR <= local.hour < config.BROADCAST_WINDOW_END_HOUR
+
+
+def _nearest_window_slot() -> datetime:
+    now = datetime.now(_PERM_TZ)
+    start = config.BROADCAST_WINDOW_START_HOUR
+    end = config.BROADCAST_WINDOW_END_HOUR
+    if start <= now.hour < end:
+        return now
+    if now.hour < start:
+        return now.replace(hour=start, minute=0, second=0, microsecond=0)
+    return (now + timedelta(days=1)).replace(hour=start, minute=0, second=0, microsecond=0)
+
+
 def _parse_scheduled_at(text: str) -> datetime | None:
     text = text.strip()
     m = re.match(r"(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})$", text)
@@ -48,7 +61,7 @@ def _parse_scheduled_at(text: str) -> datetime | None:
         d, mo = int(m[1]), int(m[2])
         year = datetime.now(_PERM_TZ).year
         try:
-            return datetime(year, mo, d, 11, 0, tzinfo=_PERM_TZ)
+            return datetime(year, mo, d, config.BROADCAST_WINDOW_START_HOUR, 0, tzinfo=_PERM_TZ)
         except ValueError:
             return None
     return None
@@ -110,8 +123,7 @@ async def _save_broadcast_source(event, context) -> None:
     )
 
 
-async def _create_broadcast(bot, user_id: int, context,
-                            scheduled_at: datetime, status: str):
+async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
     data = await context.get_data()
     mid = data.get("broadcast_source_mid")
     chat_id = data.get("broadcast_source_chat_id")
@@ -134,7 +146,7 @@ async def _create_broadcast(bot, user_id: int, context,
                     created_by=staff_row.id if staff_row else None,
                     scheduled_at=scheduled_at,
                     recipient_count=len(recipient_ids),
-                    status=status,
+                    status="pending",
                 )
                 await broadcast_model.create_recipients(session, b.id, recipient_ids)
     except Exception:
@@ -143,69 +155,9 @@ async def _create_broadcast(bot, user_id: int, context,
         return
 
     await context.set_state(RegistrationState.REGISTERED)
-    if status == "running":
-        await bot.send_message(
-            user_id=user_id,
-            text=f"Рассылка #{b.id} запущена. Получателей: {len(recipient_ids)}.",
-            attachments=[superuser_keyboard()],
-        )
-        asyncio.create_task(_run_broadcast(bot, b.id, user_id))
-    else:
-        dt = scheduled_at.strftime("%d.%m.%Y %H:%M UTC")
-        await bot.send_message(
-            user_id=user_id,
-            text=f"Рассылка #{b.id} запланирована на {dt}. Получателей: {len(recipient_ids)}.",
-            attachments=[superuser_keyboard()],
-        )
-
-
-async def _run_broadcast(bot, broadcast_id: int, superuser_id: int):
-    delay = config.BROADCAST_SEND_DELAY_SECONDS
-    try:
-        async with get_session_factory()() as session:
-            recipients = await broadcast_model.get_pending_recipients(session, broadcast_id)
-            broadcast_row = await broadcast_model.get_by_id(session, broadcast_id)
-
-        if broadcast_row is None:
-            return
-
-        source_mid = broadcast_row.source_message_id
-
-        for recipient in recipients:
-            await asyncio.sleep(delay)
-            max_user_id = recipient.customer.max_user_id if recipient.customer else None
-            if max_user_id is None:
-                logger.warning("Broadcast %s: no max_user_id for customer %s", broadcast_id, recipient.customer_id)
-                async with get_session_factory()() as session:
-                    await broadcast_model.mark_recipient_failed(session, recipient.id, "no max_user_id")
-                continue
-            try:
-                await bot.send_message(
-                    user_id=max_user_id,
-                    link=NewMessageLink(type=MessageLinkType.FORWARD, mid=source_mid),
-                )
-                async with get_session_factory()() as session:
-                    await broadcast_model.mark_recipient_sent(session, recipient.id)
-            except Exception as e:
-                logger.warning(
-                    "Broadcast %s: failed for customer %s: %s",
-                    broadcast_id, recipient.customer_id, e,
-                )
-                async with get_session_factory()() as session:
-                    await broadcast_model.mark_recipient_failed(
-                        session, recipient.id, str(e)
-                    )
-
-        async with get_session_factory()() as session:
-            b = await broadcast_model.finish(session, broadcast_id)
-        if b:
-            await bot.send_message(
-                user_id=superuser_id,
-                text=(
-                    f"Рассылка #{broadcast_id} завершена. "
-                    f"Отправлено успешно: {b.sent_count}. "
-                    f"Не удалось доставить: {b.failed_count}."
-                ),
-            )
-    except Exception:
-        logger.exception("Broadcast %s run failed", broadcast_id)
+    dt_local = scheduled_at.astimezone(_PERM_TZ).strftime("%d.%m.%Y %H:%M")
+    await bot.send_message(
+        user_id=user_id,
+        text=f"Рассылка #{b.id} запланирована на {dt_local}. Получателей: {len(recipient_ids)}.",
+        attachments=[superuser_keyboard()],
+    )

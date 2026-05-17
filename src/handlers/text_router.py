@@ -3,7 +3,6 @@ Single unified handler for all F.message.body.text events.
 Routes to sub-handlers based on `route` (from middleware) and FSM state.
 This avoids multiple handlers competing for the same event type.
 """
-import re
 import logging
 from datetime import date, datetime, timezone
 
@@ -36,9 +35,10 @@ from src.keyboards import (
     cancel_keyboard,
     broadcast_start_keyboard,
 )
-from src.handlers.registration import _format_confirmation, _parse_date
+import config
+from src.handlers.registration import _format_confirmation, _parse_date, _parse_int_list
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast
+from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast, _in_window
 from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.callback_router import _persist_survey_draft
 from src.services.discount import coupon_issued_notification
@@ -80,8 +80,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             return
 
         if state == StaffState.AWAITING_BROADCAST_RECIPIENTS:
-            raw_ids = re.split(r"[\s,;]+", text)
-            ids = list(dict.fromkeys(int(r) for r in raw_ids if r.strip().isdigit()))
+            ids = list(dict.fromkeys(_parse_int_list(text)))
             if not ids:
                 await bot.send_message(
                     user_id=user_id,
@@ -96,9 +95,11 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 user_id=user_id,
                 text=(
                     f"Создана рассылка на {len(eligible)} получателей. Когда её начать?\n"
-                    "Нажмите «Начать сейчас» или укажите дату:\n"
-                    "  • «25.06» — 25 июня в 11:00 UTC\n"
-                    "  • «25.06 14:30» — 25 июня в 14:30 UTC"
+                    f"Рассылку можно запланировать с {config.BROADCAST_WINDOW_START_HOUR}:00 "
+                    f"до {config.BROADCAST_WINDOW_END_HOUR}:00.\n"
+                    "Укажите дату:\n"
+                    f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
+                    "  • «25.06 14:30» — 25 июня в 14:30"
                 ),
                 attachments=[broadcast_start_keyboard()],
             )
@@ -112,7 +113,17 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                     text="Не понял дату. Укажите в формате «ДД.ММ» или «ДД.ММ ЧЧ:ММ»"
                 )
                 return
-            await _create_broadcast(bot, user_id, context, scheduled_at, status="pending")
+            if not _in_window(scheduled_at):
+                await bot.send_message(
+                    user_id=user_id,
+                    text=(
+                        f"Время {scheduled_at.strftime('%H:%M')} недоступно для рассылки. "
+                        f"Укажите время с {config.BROADCAST_WINDOW_START_HOUR}:00 "
+                        f"до {config.BROADCAST_WINDOW_END_HOUR}:00."
+                    )
+                )
+                return
+            await _create_broadcast(bot, user_id, context, scheduled_at)
             return
 
     # Scenario 15 Flow B: coupon issuance

@@ -3,7 +3,7 @@ Single unified handler for all message_callback events.
 Routes to sub-handlers based on `route`, `staff`, and FSM state.
 """
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 
 from maxapi.types import MessageCallback
 from maxapi.context import MemoryContext
@@ -43,7 +43,7 @@ from src.keyboards import (
 )
 from src.handlers.registration import _format_confirmation, _parse_date
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _create_broadcast, _parse_scheduled_at
+from src.handlers.broadcast import _create_broadcast, _parse_scheduled_at, _nearest_window_slot
 from src.handlers.staff import _send_customer_profile_by_id
 from src.services.discount import coupon_issued_notification
 
@@ -209,14 +209,11 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
             )
             return
 
-        if payload == "broadcast:now":
+        if payload == "broadcast:soonest":
             if state != StaffState.AWAITING_BROADCAST_TIME:
                 return
             await context.set_state(RegistrationState.REGISTERED)
-            await _create_broadcast(
-                bot, user_id, context,
-                datetime.now(tz=timezone.utc), status="running"
-            )
+            await _create_broadcast(bot, user_id, context, _nearest_window_slot())
             return
 
         if payload == "broadcast:cancel":

@@ -18,6 +18,8 @@ OWNER_MAX_USER_ID: int | None = (
 )
 
 BROADCAST_SEND_DELAY_SECONDS: float = float(os.environ.get("BROADCAST_SEND_DELAY_SECONDS", 15))
+BROADCAST_WINDOW_START_HOUR: int = int(os.environ.get("BROADCAST_WINDOW_START_HOUR", 10))
+BROADCAST_WINDOW_END_HOUR: int = int(os.environ.get("BROADCAST_WINDOW_END_HOUR", 17))
 
 # Bot URL for deeplinks embedded in customer QR codes.
 # Format: https://max.ru/<botName>

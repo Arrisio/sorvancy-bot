@@ -33,6 +33,10 @@ def _parse_date(text: str) -> date | None:
         return None
 
 
+def _parse_int_list(text: str) -> list[int]:
+    return [int(p) for p in re.split(r"\D+", text.strip()) if p]
+
+
 def _format_confirmation(data: dict) -> str:
     fn = data.get("draft.first_name") or "—"
     ln = data.get("draft.last_name") or ""
