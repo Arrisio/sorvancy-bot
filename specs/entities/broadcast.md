@@ -1,7 +1,7 @@
 # Entity: Broadcast
 
 ## Purpose
-Mass message forwarded to a filtered set of customers; may be immediate or scheduled.
+Mass message forwarded to a filtered set of customers; may be immediate or scheduled; optionally issues a coupon to each recipient on delivery.
 
 ## Fields
 
@@ -16,6 +16,9 @@ Mass message forwarded to a filtered set of customers; may be immediate or sched
 | recipient_count | int | not null | Recipient list size at creation time; excludes opt-out customers |
 | sent_count | int | not null, default 0 | Derived: COUNT(BroadcastRecipient WHERE status=sent) |
 | failed_count | int | not null, default 0 | Derived: COUNT(BroadcastRecipient WHERE status=failed) |
+| coupon_value | int | nullable | Coupon template: whole rubles; null means no coupon attached |
+| coupon_validity_days | int | nullable | Coupon template: days from delivery time until expiry |
+| coupon_max_payment_pct | int | nullable | Coupon template: max % of purchase coverable by coupon (1–100) |
 
 ## Invariants
 
@@ -23,6 +26,7 @@ Mass message forwarded to a filtered set of customers; may be immediate or sched
 - Status transitions: `pending` → `running` → `completed` | `cancelled`
 - `cancelled` set by superuser via scenario 12 or [Отмена] at scheduling step in scenario 11
 - `sent_count + failed_count ≤ recipient_count`
+- Coupon template fields are all-or-nothing: either all three (`coupon_value`, `coupon_validity_days`, `coupon_max_payment_pct`) are set, or all are null
 
 ## Relations
 

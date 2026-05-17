@@ -27,20 +27,12 @@ Customer receives new coupon and notification of issuance.
 ### Flow B — Seller-initiated
 
 1. Seller clicks «Выдать купон» on customer profile.
-2. Bot sends seller:
-
-   «Выдаёте купон клиенту [first_name] [last_name]. Введите максимальную сумму купона (в рублях, 101–1000):»
-
-   Buttons: [Отмена]
-
-3. Seller types integer 101–1000 → stored as `coupon_draft.value`.
-4. Bot asks: «Срок действия купона (в днях, минимум 7):» + button [Отмена]
-5. Seller types integer ≥ 7 → `coupon_draft.validity_days`; `valid_until = now() + validity_days days`.
-6. Bot asks: «Максимальный процент от покупки, который можно оплатить купоном (1–100):» + button [Отмена]
-7. Seller types integer 1–100 → `coupon_draft.max_payment_pct`.
-8. Bot saves Coupon to DB: `type=seller`, plus drafted value/valid_until/max_payment_pct.
-9. Bot sends customer notification (see Notification section).
-10. Bot sends seller updated customer profile (scenario 06 format).
+2. Bot sends: «Выдаёте купон клиенту [first_name] [last_name].» + button [Отмена]
+3. Bot runs sub-scenario 21 (Coupon Input) → collects `coupon_draft = {value, validity_days, max_payment_pct}`.
+   - On cancellation → A1.
+4. Bot saves Coupon: `type=seller`; `valid_until = now() + coupon_draft.validity_days days`.
+5. Bot sends customer notification (see Notification section).
+6. Bot sends seller updated customer profile (scenario 06 format).
 
 ## Notification
 
@@ -50,25 +42,12 @@ Bot sends customer:
 
 ## Alternative flows
 
-### A1: Seller clicks [Отмена] at step 2
-- No DB write; scenario ends; profile message unchanged.
-
-### A2: Seller clicks [Отмена] at step 4 or 6
-- No DB write; scenario ends; bot sends customer profile (scenario 06 format).
+### A1: Cancellation during Flow B
+- Seller clicks [Отмена] at step 2, or sub-scenario 21 signals cancellation → no DB write; scenario ends; profile message unchanged.
 
 ## Negative scenarios
 
-### N1: Non-integer input in Flow B
-- Bot: «Введите целое число.»
-- State unchanged; seller retries same step.
-
-### N2: `value` out of range (≤100 or >1000) in Flow B
-- Bot: «Введите сумму от 101 до 1000 рублей.»
-- State unchanged; seller retries step 3.
-
-### N3: `validity_days` < 7 in Flow B
-- Bot: «Срок должен быть не менее 7 дней.»
-- State unchanged; seller retries step 5.
+Validation errors during coupon data entry handled by sub-scenario 21.
 
 ## Postconditions
 - Coupon record created in DB linked to customer.
