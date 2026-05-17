@@ -26,7 +26,7 @@ Progress shown in each message: «Шаг N из 4» for customer steps; «Реб
 
 | Step | State | Bot sends | User action |
 |------|-------|----------|-------------|
-| 1 | REGISTERED | Delete survey offer message. Set AWAITING_NAME. «Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:» + [← Назад] | Types name |
+| 1 | REGISTERED | Delete survey offer message. Set AWAITING_NAME. «Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:» + [Отмена] | Types name or clicks Отмена |
 | 2 | AWAITING_NAME | Store `draft.first_name`. Set AWAITING_LAST_NAME. «Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. Можно пропустить 😊» + [Пропустить] [← Назад] | Types or skips |
 | 3 | AWAITING_LAST_NAME | Store `draft.last_name` (null if skipped). Set AWAITING_CUSTOMER_BIRTHDATE. «Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
 | 4 | AWAITING_CUSTOMER_BIRTHDATE | Store `draft.birthdate` (null if skipped). Set AWAITING_CHILD_NAME. «Шаг 4 из 4 · Как зовут вашего ребёнка?» + (if 0 children in draft: [Купить для себя]) + [← Назад] | Types name or clicks Купить для себя |
@@ -122,7 +122,7 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 
 | Current state | Back navigates to |
 |--------------|------------------|
-| AWAITING_NAME | REGISTERED — ask confirm cancel, then «Анкета отменена.» + discard draft |
+| AWAITING_NAME | **[Отмена]** — delete current question message, discard draft, set REGISTERED. No confirmation prompt. |
 | AWAITING_LAST_NAME | AWAITING_NAME — re-ask name |
 | AWAITING_CUSTOMER_BIRTHDATE | AWAITING_LAST_NAME — re-ask last name |
 | AWAITING_CHILD_NAME (child index=1) | AWAITING_CUSTOMER_BIRTHDATE |
@@ -198,4 +198,3 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 - [ ] Draft persistence across bot restarts: MemoryContext is lost on restart. Resume (A2) requires draft to survive. Options: write Customer fields immediately + hold children in draft; or persist draft JSON to DB. Decide before implementation.
 - [ ] Confirmation card editing: Max messenger API supports `editMessageText`? If not, bot must send new card message on each edit.
 - [ ] Re-running survey after survey_completed = True: redirect to profile editing scenario (05) or block?
-- [ ] Cancel from AWAITING_NAME: ask confirmation before discarding draft, or discard immediately?
