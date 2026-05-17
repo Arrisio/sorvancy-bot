@@ -19,7 +19,7 @@ User clicks «Мой профиль» button in registered keyboard (payload `pr
 
 ### Profile card
 
-1. Bot checks if questionnaire started (see A5 for unfilled case).
+1. Bot checks survey state: if survey never started → A5; if started but not completed → A6; otherwise continue to profile card.
 
 2. Bot sends profile card message:
 
@@ -172,7 +172,7 @@ Back within add-child sub-form:
 - [👶 Управление детьми] available
 - Adding child with birthdate → if survey_completed transitions False → True: create Coupon (same rule as scenario 02)
 
-### A5: Questionnaire never started (no fields filled)
+### A5: Survey never started (no fields filled, no draft)
 - Bot sends simplified profile message:
 
 ```
@@ -184,7 +184,23 @@ Back within add-child sub-form:
 [← Главное меню]
 ```
 
-- [Заполнить анкету] triggers scenario 02 (survey)
+- [Заполнить анкету] (payload `survey:start`) triggers scenario 02 (survey)
+- No field edit buttons shown
+
+### A6: Survey started but not completed
+- Condition: `survey_completed = false` AND survey was started but not cancelled (draft or FSM state in SURVEY_STATES)
+- Bot sends simplified profile message:
+
+```
+👤 Ваш профиль
+
+Анкета не заполнена
+
+[Продолжить заполнение анкеты]
+[← Главное меню]
+```
+
+- [Продолжить заполнение анкеты] (payload `survey:resume`) → resumes scenario 02 from last unanswered step
 - No field edit buttons shown
 
 ## MemoryContext keys during profile editing
@@ -213,3 +229,5 @@ Back within add-child sub-form:
 - [ ] Children list: show child age (computed from birthdate)? Shown in 7a example — confirm.
 - [ ] Max children per customer: no limit defined. Confirm.
 - [ ] A5 trigger condition: "never started" = `first_name IS NULL`? Or `survey_completed = false` AND all fields null? Define exact DB check.
+- [ ] A6 detection: "survey in progress" requires FSM state ∈ SURVEY_STATES or draft keys in MemoryContext. MemoryContext is lost on bot restart — after restart, in-progress and never-started cases become indistinguishable without a DB flag. Decide: add `survey_started_at` DB column, or treat post-restart as "never started"?
+- [ ] A6 resume behavior: [Продолжить заполнение анкеты] jumps directly to last unanswered step, or first shows A2 summary card (scenario 02) with [▶️ Продолжить] and [🔄 Начать заново] options?
