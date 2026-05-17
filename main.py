@@ -15,6 +15,7 @@ from src.handlers.broadcast import register_broadcast_handlers
 from src.handlers.excel import register_excel_handlers
 from src.handlers.text_router import register_text_router
 from src.handlers.callback_router import register_callback_router
+from src.scheduler import broadcast_delivery_loop, birthday_reminder_loop
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,6 +50,9 @@ async def main():
 
     # Single unified callback router — handles all message_callback events
     await register_callback_router(dp)
+
+    asyncio.create_task(broadcast_delivery_loop(bot))
+    asyncio.create_task(birthday_reminder_loop(bot))
 
     logger.info("Starting polling...")
     try:

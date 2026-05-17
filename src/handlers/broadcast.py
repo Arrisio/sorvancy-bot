@@ -18,6 +18,7 @@ from src.keyboards import (
     broadcast_start_keyboard,
     cancel_broadcast_keyboard,
     cancel_keyboard,
+    superuser_keyboard,
     BROADCAST_CREATE_BTN_TEXT,
     BROADCAST_LIST_BTN_TEXT,
 )
@@ -89,6 +90,23 @@ async def register_broadcast_handlers(dp):
             )
 
 
+async def _save_broadcast_source(event, context) -> None:
+    """Save broadcast source message reference and advance state to AWAITING_BROADCAST_RECIPIENTS."""
+    user_id = event.message.sender.user_id
+    mid = event.message.body.mid
+    chat_id = getattr(event.message.recipient, "chat_id", None) or user_id
+    await context.update_data(
+        broadcast_source_mid=mid,
+        broadcast_source_chat_id=chat_id,
+    )
+    await context.set_state(StaffState.AWAITING_BROADCAST_RECIPIENTS)
+    await event.bot.send_message(
+        user_id=user_id,
+        text="Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
+        attachments=[cancel_keyboard("broadcast:cancel_create")],
+    )
+
+
 async def _create_broadcast(bot, user_id: int, context,
                             scheduled_at: datetime, status: str):
     data = await context.get_data()
@@ -126,6 +144,7 @@ async def _create_broadcast(bot, user_id: int, context,
         await bot.send_message(
             user_id=user_id,
             text=f"Рассылка #{b.id} запущена. Получателей: {len(recipient_ids)}.",
+            attachments=[superuser_keyboard()],
         )
         asyncio.create_task(_run_broadcast(bot, b.id, user_id))
     else:
@@ -133,6 +152,7 @@ async def _create_broadcast(bot, user_id: int, context,
         await bot.send_message(
             user_id=user_id,
             text=f"Рассылка #{b.id} запланирована на {dt}. Получателей: {len(recipient_ids)}.",
+            attachments=[superuser_keyboard()],
         )
 
 
@@ -146,7 +166,7 @@ async def _run_broadcast(bot, broadcast_id: int, superuser_id: int):
         if broadcast_row is None:
             return
 
-        source_mid = str(broadcast_row.source_message_id)
+        source_mid = broadcast_row.source_message_id
 
         for recipient in recipients:
             await asyncio.sleep(delay)

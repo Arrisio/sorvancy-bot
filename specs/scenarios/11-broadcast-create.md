@@ -17,8 +17,8 @@ Superuser clicks «Запустить рассылку» button.
 
 1. Superuser clicks «Запустить рассылку»
 2. Bot sends: «Пришлите сообщение для рассылки»
-3. Superuser sends message with broadcast content
-4. Bot saves reference to original message (will be forwarded to each recipient — not re-sent as new message); sends: «Пришлите номера клиентов для рассылки» + inline button [Отмена]
+3. Superuser sends message with broadcast content — any message type is accepted: text, photo, file, video, audio, sticker, or any other supported attachment; the original message is saved by reference
+4. Bot saves reference to original message (will be forwarded to each recipient via Forward — not re-sent as new message; attachments preserved automatically); sends: «Пришлите номера клиентов для рассылки» + inline button [Отмена]
 5. Superuser sends recipient list — either:
    - Text message containing Customer IDs
    - Excel or CSV file (same format as Excel export scenario; rows hidden by filter treated as excluded)

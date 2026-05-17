@@ -106,7 +106,7 @@ class Broadcast(Base):
     __tablename__ = "broadcasts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    source_message_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    source_message_id: Mapped[str] = mapped_column(Text, nullable=False)
     source_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_by: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("staff.id", ondelete="SET NULL"), nullable=True

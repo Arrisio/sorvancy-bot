@@ -45,6 +45,14 @@ async def register_staff_handlers(dp):
         customer: Customer | None = None,
         route: str = "registration",
     ):
+        # Broadcast content: staff owner sends any attachment as broadcast message source
+        if route == "staff" and staff is not None and staff.is_owner:
+            state = await context.get_state()
+            if state == StaffState.AWAITING_BROADCAST_MSG:
+                from src.handlers.broadcast import _save_broadcast_source
+                await _save_broadcast_source(event, context)
+                return
+
         if route != "customer":
             return
         state = await context.get_state()

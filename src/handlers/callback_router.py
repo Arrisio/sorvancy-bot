@@ -202,10 +202,16 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
     if staff.is_owner:
         if payload == "broadcast:cancel_create":
             await context.set_state(RegistrationState.REGISTERED)
-            await bot.send_message(user_id=user_id, text="Рассылка отменена.")
+            await bot.send_message(
+                user_id=user_id, text="Рассылка отменена.",
+                attachments=[superuser_keyboard()],
+            )
             return
 
         if payload == "broadcast:now":
+            if state != StaffState.AWAITING_BROADCAST_TIME:
+                return
+            await context.set_state(RegistrationState.REGISTERED)
             await _create_broadcast(
                 bot, user_id, context,
                 datetime.now(tz=timezone.utc), status="running"
@@ -213,8 +219,13 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
             return
 
         if payload == "broadcast:cancel":
+            if state not in (StaffState.AWAITING_BROADCAST_TIME, StaffState.AWAITING_BROADCAST_RECIPIENTS, StaffState.AWAITING_BROADCAST_MSG):
+                return
             await context.set_state(RegistrationState.REGISTERED)
-            await bot.send_message(user_id=user_id, text="Рассылка отменена.")
+            await bot.send_message(
+                user_id=user_id, text="Рассылка отменена.",
+                attachments=[superuser_keyboard()],
+            )
             return
 
         if payload.startswith("broadcast:cancel:"):

@@ -9,7 +9,7 @@ from src.db.orm import Broadcast, BroadcastRecipient, Customer, Staff
 
 async def create(
     session: AsyncSession,
-    source_message_id: int,
+    source_message_id: str,
     source_chat_id: int,
     created_by: int,
     scheduled_at: datetime,

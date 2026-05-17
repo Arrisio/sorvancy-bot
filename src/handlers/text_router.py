@@ -13,7 +13,7 @@ from maxapi.context import MemoryContext
 
 from src.states import RegistrationState, ProfileState, StaffState
 from src.db.orm import Customer, Staff
-from maxapi.enums.parse_mode import TextFormat
+from maxapi.enums.parse_mode import ParseMode as TextFormat
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import child as child_model
@@ -74,22 +74,8 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
     # Broadcast states (owner only)
     if staff.is_owner:
         if state == StaffState.AWAITING_BROADCAST_MSG:
-            mid = event.message.mid
-            chat_id = None
-            try:
-                chat_id = event.message.recipient.chat_id
-            except Exception:
-                chat_id = user_id
-            await context.update_data(
-                broadcast_source_mid=mid,
-                broadcast_source_chat_id=chat_id,
-            )
-            await context.set_state(StaffState.AWAITING_BROADCAST_RECIPIENTS)
-            await bot.send_message(
-                user_id=user_id,
-                text="Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
-                attachments=[cancel_keyboard("broadcast:cancel_create")],
-            )
+            from src.handlers.broadcast import _save_broadcast_source
+            await _save_broadcast_source(event, context)
             return
 
         if state == StaffState.AWAITING_BROADCAST_RECIPIENTS:
@@ -107,7 +93,12 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             await context.set_state(StaffState.AWAITING_BROADCAST_TIME)
             await bot.send_message(
                 user_id=user_id,
-                text=f"Создана рассылка на {len(eligible)} получателей. Когда её начать?",
+                text=(
+                    f"Создана рассылка на {len(eligible)} получателей. Когда её начать?\n"
+                    "Нажмите «Начать сейчас» или укажите дату:\n"
+                    "  • «25.06» — 25 июня в 11:00 UTC\n"
+                    "  • «25.06 14:30» — 25 июня в 14:30 UTC"
+                ),
                 attachments=[broadcast_start_keyboard()],
             )
             return
