@@ -35,7 +35,7 @@ Progress shown in each message: «Шаг N из 4» for customer steps; «Реб
 | 7 | AWAITING_CHILD_BIRTHDATE | Store `birthdate` into current child draft (null if skipped). Set AWAITING_MORE_CHILDREN. «Ребёнок N · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?» + [Да] [Нет] | Clicks button |
 | 8 | AWAITING_MORE_CHILDREN | **Да** → new child draft entry, set AWAITING_CHILD_NAME, go to step 5. **Нет** → set AWAITING_CONFIRMATION, send confirmation card (see section below). | Clicks button on confirmation card |
 | 9 | AWAITING_CONFIRMATION | User reviews draft. May edit fields inline (see section below). On [✅ Сохранить] → set AWAITING_CONTACT, send contact prompt. | Clicks Сохранить or edits |
-| 10 | AWAITING_CONTACT | On contact share or [Завершить]: write all draft data to DB in single transaction. Compute `survey_completed`. If False → True: create Coupon. Set REGISTERED. Send «Анкета заполнена! Спасибо 🎉». | Shares contact or clicks Завершить |
+| 10 | AWAITING_CONTACT | **Path A — contact shared:** bot receives contact event from Max API → extract phone → store `draft.phone` → write all draft data to DB in single transaction (including phone). **Path B — [Завершить]:** write all draft data to DB (phone = null). Both paths: compute `survey_completed`; if False → True create Coupon; set REGISTERED; send «Анкета заполнена! Спасибо 🎉». | Clicks [📞 Запрос контактов] and shares phone, or clicks [Завершить] |
 
 ## Confirmation card (step 8 → AWAITING_CONFIRMATION)
 
@@ -103,7 +103,16 @@ Editing child field: bot asks one question → draft updated → re-show child c
 ## Contact prompt (step 9 → AWAITING_CONTACT)
 
 «Последний шаг — поделитесь контактом как запасным каналом связи. Если что-то случится с ботом, мы не потеряем вас! Это необязательно.»
-Buttons: [📞 Поделиться контактом] [Завершить заполнение анкеты] [← Назад]
+
+Buttons:
+- [📞 Запрос контактов] — Max API contact-request button (type `request_contact`); triggers native contact sharing dialog in Max messenger
+- [Завершить заполнение анкеты] — regular button; completes without phone
+- [← Назад]
+
+On contact received (Max API contact event):
+1. Extract `phone` from contact payload
+2. Store as `draft.phone`
+3. Proceed to DB write + completion (same as Path A in step 10)
 
 [← Назад] from contact prompt → re-show confirmation card (back to AWAITING_CONFIRMATION).
 
@@ -171,6 +180,7 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 | `draft.children` | List of `{name, gender, birthdate}` dicts |
 | `draft.current_child_index` | 1-based index of child being filled |
 | `draft.editing_field` | Field being edited from confirmation card (cleared after update) |
+| `draft.phone` | Phone from contact event (null if user skipped via Завершить) |
 
 ## Postconditions
 - Single DB transaction at step 10:

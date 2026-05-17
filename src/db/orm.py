@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from sqlalchemy import (
     BigInteger, Boolean, Integer, String, Text, Date, TIMESTAMP,
-    ForeignKey, CheckConstraint, UniqueConstraint,
+    ForeignKey, CheckConstraint, UniqueConstraint, Sequence,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -13,7 +13,9 @@ class Base(DeclarativeBase):
 class Customer(Base):
     __tablename__ = "customers"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer, Sequence("customers_id_seq", start=10000), primary_key=True
+    )
     max_user_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     max_username: Mapped[str | None] = mapped_column(String(255))
     first_name: Mapped[str | None] = mapped_column(String(255))

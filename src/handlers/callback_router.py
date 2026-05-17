@@ -451,8 +451,8 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
                     session, cust.id, opt_out_marketing=new_flag
                 )
                 ch = await child_model.get_by_customer(session, cust.id)
-        await bot.send_message(
-            user_id=user_id,
+        await bot.edit_message(
+            message_id=event.message.body.mid,
             text=_profile_text(cust, ch),
             attachments=[profile_card_keyboard(cust.opt_out_marketing)],
         )
