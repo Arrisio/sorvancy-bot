@@ -19,6 +19,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 | registered_at | timestamptz | not null, default now() | Phase 1 completion time |
 | opt_out_marketing | boolean | not null, default false | Customer opted out of personal offers; excludes from all Broadcast recipient lists |
 | survey_draft | jsonb | nullable | Full survey context snapshot: FSM state + all `draft.*` keys; written at each step; null when not mid-survey |
+| last_touch | timestamptz | nullable | Set to now() when Customer clicks «Показать QR-код» (scenario 03) or «Связаться с продавцом» (scenario 17); null if neither action ever taken |
 
 ## Invariants
 
@@ -28,6 +29,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 - opt_out_marketing = true → Customer excluded from all Broadcast recipient lists; flag toggled by Customer from own profile
 - first_name, last_name, birthdate, phone: null until survey step populates them
 - survey_draft: populated at each survey step with full context (FSM state + collected data); null means survey not started or was cancelled; cleared on completion or cancellation
+- last_touch: updated on every trigger action (QR view, contact seller); not cleared; null only if Customer has never triggered either action
 
 ## Survey completion signal
 

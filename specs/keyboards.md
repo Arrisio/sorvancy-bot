@@ -12,7 +12,7 @@ Bot presents a persistent reply keyboard based on actor type. Actor detection ru
 |--------|----------|
 | «Мой профиль» | → 05 Profile Editing |
 | «Скидка» | → 03 Discount QR |
-| «Связаться с продавцом» | → TBD (not yet specced) |
+| «Связаться с продавцом» | → 17 Contact Seller |
 
 ---
 
@@ -58,6 +58,6 @@ Note: Superuser registers sellers by forwarding a contact card — no keyboard b
 
 ## Open questions
 
-- [ ] «Связаться с продавцом»: scenario TBD — keep as placeholder or remove until specced?
+- [ ] «Связаться с продавцом»: scenario 17 stubbed; main flow content TBD.
 - [ ] Staff keyboard shown on bot_started for known Staff, or only after explicit action?
 - [ ] Superuser in `customer_mode = true`: which keyboard shown on bot_started — customer keyboard, or no automatic keyboard?

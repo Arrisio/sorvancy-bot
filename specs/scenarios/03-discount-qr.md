@@ -39,7 +39,7 @@ User clicks "Скидка" button.
 
 ## Postconditions
 - User has QR and deeplink URL visible on screen
-- No DB writes
+- `Customer.last_touch` set to current datetime
 
 ## Open questions
 - [ ] Link label text: «Ссылка для продавца:» confirmed? Or different wording?

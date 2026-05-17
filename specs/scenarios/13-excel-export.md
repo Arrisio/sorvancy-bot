@@ -38,6 +38,7 @@ One base row per Customer. If Customer has multiple children, that row expands i
 | Скидка, % | Customer.discount_percent |
 | Дата регистрации | Customer.registered_at |
 | Отказ от рассылок | Customer.opt_out_marketing |
+| Последняя активность | Customer.last_touch |
 
 **Child columns** (one value per child sub-row):
 
