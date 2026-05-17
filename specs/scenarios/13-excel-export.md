@@ -22,11 +22,11 @@ Superuser clicks «Excel» button.
 
 ## File structure
 
-One base row per Customer. If Customer has multiple children, that row expands into sub-rows — one sub-row per child. Customer-level columns span all child sub-rows (merged cells or repeated values — see Open questions). If Customer has no children: single row with child columns empty.
+One base row per Customer. If Customer has multiple children, expands into one sub-row per child. Customer-level columns **merged** across all child sub-rows (vertical merge). If Customer has no children: single row, child columns empty.
 
 ### Columns
 
-**Customer columns** (one value per customer, spans child sub-rows):
+**Customer columns** (merged vertically across child sub-rows when multiple children):
 
 | Column | Source field |
 |--------|-------------|
@@ -48,26 +48,29 @@ One base row per Customer. If Customer has multiple children, that row expands i
 | Пол | Child.gender |
 | Дата рождения ребёнка | Child.birthdate |
 
-**Coupon column** (all active coupons in one cell, one per line):
+**Coupon column** (merged vertically across child sub-rows; wrap text enabled):
 
 | Column | Content |
 |--------|---------|
-| Активные купоны | Each active coupon on separate line: «[type] — [value] ₽, до [valid_until]» |
+| Активные купоны | All active coupons in one cell, each coupon on separate line: «[type] — [value] ₽, до [valid_until]» |
 
 Active coupon filter: `status = active` AND `valid_until > now()`.
 
+### Formatting rules
+
+1. **Merged cells** — for customers with 2+ children: all Customer columns and the «Активные купоны» column are merged vertically across child sub-rows. Merged cells: vertical align = center.
+2. **Wrap text** — «Активные купоны» column always has `wrap_text = True`, so multiple coupons render on separate lines within the cell.
+3. **Column auto-width** — all columns sized to fit widest content (header or data). No manual column resizing required after opening file.
+
 ## Postconditions
-- Superuser receives `.xlsx` file
+- Superuser receives `.xlsx` file named `sorvancy_export_YYYY-MM-DD.xlsx`
 - No DB writes
 
 ## NFR refs
 - pii.md
 
 ## Open questions
-- [ ] Multi-child row layout: merged cells (customer columns merged across child sub-rows) or repeated values (customer data copied into each child sub-row)? Merged cells are harder to filter in Excel; repeated values are easier for data processing.
-- [ ] Customer.id shown as «Номер клиента» — must match the identifier used in scenario 10 (Find Profile) and shown in scenario 03 (Discount QR). Confirm all three reference the same field.
-- [ ] Coupon cell format: exact per-line string format for active coupons?
+- [ ] Customer.last_touch absent from current code (`src/handlers/excel.py` base_row has 8 fields, omits last_touch). Add to export or keep omitted?
 - [ ] Customers with zero active coupons: coupon cell empty or «—»?
-- [ ] Column ordering: exact column order in file?
-- [ ] File name format: e.g. `sorvancy_export_2026-05-17.xlsx`?
+- [ ] Column ordering: exact column order in file? Current code order assumed as canonical.
 - [ ] survey_completed flag: include in export or omit?

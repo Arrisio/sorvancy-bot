@@ -130,6 +130,15 @@ async def register_start_handlers(dp):
 
     @dp.message_created(F.message.body.text == CONTACT_STAFF_BTN_TEXT)
     async def on_contact_staff(event: MessageCreated, context: MemoryContext):
+        user_id = event.message.sender.user_id
+        async with get_session_factory()() as session:
+            customer = await customer_model.get_by_max_id(session, user_id)
+        if customer:
+            async with get_session_factory()() as session:
+                async with session.begin():
+                    await customer_model.update_field(
+                        session, customer.id, last_touch=datetime.now(tz=timezone.utc)
+                    )
         await event.message.answer("Свяжитесь с нашим магазином: TBD.")
 
 

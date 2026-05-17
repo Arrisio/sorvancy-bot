@@ -72,6 +72,7 @@ async def _generate_excel() -> bytes:
     headers = [
         "Номер клиента", "Имя", "Фамилия", "Телефон", "Дата рождения",
         "Скидка, %", "Дата регистрации", "Отказ от рассылок",
+        "Последняя активность",
         "Имя ребёнка", "Пол", "Дата рождения ребёнка",
         "Активные купоны",
     ]
@@ -91,6 +92,7 @@ async def _generate_excel() -> bytes:
 
         bd_str = cust.birthdate.strftime("%d.%m.%Y") if cust.birthdate else ""
         reg_str = cust.registered_at.strftime("%d.%m.%Y") if cust.registered_at else ""
+        touch_str = cust.last_touch.strftime("%d.%m.%Y %H:%M") if cust.last_touch else ""
 
         base_row = [
             cust.id,
@@ -101,6 +103,7 @@ async def _generate_excel() -> bytes:
             cust.discount_percent,
             reg_str,
             "Да" if cust.opt_out_marketing else "Нет",
+            touch_str,
         ]
 
         if not children:
