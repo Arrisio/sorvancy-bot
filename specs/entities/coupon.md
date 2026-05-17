@@ -27,6 +27,7 @@ Single-use discount coupon issued to a customer as a benefit; lets customer pay 
 - Customer may hold multiple active coupons simultaneously
 - Multiple coupons may be applied to one purchase (stacking allowed)
 - Coupon issued automatically when Customer.survey_completed transitions False → True (`type = anket`)
+- Coupon issued manually by seller (`type = seller`)
 
 ## Relations
 

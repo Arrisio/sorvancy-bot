@@ -30,9 +30,10 @@ Seller follows deeplink (scans customer QR or opens link) — bot receives deepl
 
 [Купон «…»]  [Купон «…»]
 [Изменить % скидки]
+[Выдать купон]
 ```
 
-Each coupon button triggers scenario 08. "Изменить % скидки" button triggers scenario 07.
+Each coupon button triggers scenario 08. "Изменить % скидки" triggers scenario 07. "Выдать купон" triggers scenario 15.
 
 ## Postconditions
 - Seller sees customer's discount percent and active coupons with action buttons
