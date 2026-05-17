@@ -20,8 +20,9 @@ Seller clicks "Изменить % скидки" button on customer profile messa
 1. Bot sends seller: «Введите новое значение скидки (0–30):»
 2. Seller enters integer in range [0, 30]
 3. Bot updates `Customer.discount_percent` in DB
-4. Bot sends seller: «Скидка изменена: ~~[старое]%~~ → [новое]%»
-5. Bot sends customer: «Скидка изменена: ~~[старое]%~~ → [новое]%»
+4. Bot sends seller: «Скидка изменена: ~~[старое]%~~ → [новое]%» (old value strikethrough, HTML format)
+5. Bot sends customer: «Ваша скидка изменена: ~~[старое]%~~ → [новое]%» (old value strikethrough, HTML format)
+6. Bot sends seller updated customer profile (scenario 06 format)
 
 ## Negative scenarios
 
@@ -33,9 +34,9 @@ Seller clicks "Изменить % скидки" button on customer profile messa
 
 ## Postconditions
 - `Customer.discount_percent` updated in DB
-- Seller and customer both received notification with old and new values
+- Seller received notification with old (strikethrough) and new values + updated customer profile
+- Customer received notification with old (strikethrough) and new values
 
 ## Open questions
 - [ ] Is "Изменить % скидки" restricted to `is_owner = true`, or available to all Staff?
 - [ ] Seller abandons input (no reply): timeout or cancel behavior?
-- [ ] Strikethrough format: Max Messenger supports `~~text~~` markdown? Confirm rendering.

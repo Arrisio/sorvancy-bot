@@ -8,6 +8,8 @@ import re
 from datetime import datetime, timezone
 
 from maxapi.types import MessageCreated
+from maxapi.types.message import NewMessageLink
+from maxapi.enums.message_link_type import MessageLinkType
 from maxapi.filters import F
 from maxapi.context import MemoryContext
 
@@ -135,27 +137,29 @@ async def _create_broadcast(bot, user_id: int, context,
 
 
 async def _run_broadcast(bot, broadcast_id: int, superuser_id: int):
-    from sqlalchemy import select
-    from src.db.orm import Broadcast
-
     delay = config.BROADCAST_SEND_DELAY_SECONDS
     try:
         async with get_session_factory()() as session:
             recipients = await broadcast_model.get_pending_recipients(session, broadcast_id)
-            r = await session.execute(
-                select(Broadcast).where(Broadcast.id == broadcast_id)
-            )
-            broadcast_row = r.scalar_one_or_none()
+            broadcast_row = await broadcast_model.get_by_id(session, broadcast_id)
 
         if broadcast_row is None:
             return
 
+        source_mid = str(broadcast_row.source_message_id)
+
         for recipient in recipients:
             await asyncio.sleep(delay)
+            max_user_id = recipient.customer.max_user_id if recipient.customer else None
+            if max_user_id is None:
+                logger.warning("Broadcast %s: no max_user_id for customer %s", broadcast_id, recipient.customer_id)
+                async with get_session_factory()() as session:
+                    await broadcast_model.mark_recipient_failed(session, recipient.id, "no max_user_id")
+                continue
             try:
                 await bot.send_message(
-                    user_id=recipient.customer_id,
-                    text="[Рассылка] Сообщение от магазина Сорванцы",
+                    user_id=max_user_id,
+                    link=NewMessageLink(type=MessageLinkType.FORWARD, mid=source_mid),
                 )
                 async with get_session_factory()() as session:
                     await broadcast_model.mark_recipient_sent(session, recipient.id)

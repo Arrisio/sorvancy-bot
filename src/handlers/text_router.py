@@ -12,6 +12,8 @@ from maxapi.filters import F
 from maxapi.context import MemoryContext
 
 from src.states import RegistrationState, ProfileState, StaffState
+from src.db.orm import Customer, Staff
+from maxapi.enums.parse_mode import TextFormat
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import child as child_model
@@ -50,8 +52,8 @@ async def register_text_router(dp):
         event: MessageCreated,
         context: MemoryContext,
         route: str = "registration",
-        customer=None,
-        staff=None,
+        customer: Customer | None = None,
+        staff: Staff | None = None,
     ):
         text = event.message.body.text.strip()
         user_id = event.message.sender.user_id
@@ -92,7 +94,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
 
         if state == StaffState.AWAITING_BROADCAST_RECIPIENTS:
             raw_ids = re.split(r"[\s,;]+", text)
-            ids = [int(r) for r in raw_ids if r.strip().isdigit()]
+            ids = list(dict.fromkeys(int(r) for r in raw_ids if r.strip().isdigit()))
             if not ids:
                 await bot.send_message(
                     user_id=user_id,
@@ -194,6 +196,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 )
             except Exception:
                 logger.warning("Could not notify customer %s of coupon issuance", cust.max_user_id)
+        await _send_customer_profile_by_id(bot, user_id, customer_id)
         return
 
     # Customer ID lookup
@@ -233,16 +236,22 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             logger.exception("Discount update failed for customer_id=%s", customer_id)
             await bot.send_message(user_id=user_id, text="Ошибка при изменении скидки. Попробуйте ещё раз.")
             return
-        await bot.send_message(user_id=user_id, text=f"Скидка изменена: {old_pct}% → {val}%")
+        await bot.send_message(
+            user_id=user_id,
+            text=f"Скидка изменена: <s>{old_pct}%</s> → {val}%",
+            parse_mode=TextFormat.HTML,
+        )
         if customer_max_id:
             try:
                 await bot.send_message(
                     user_id=customer_max_id,
-                    text=f"Ваша скидка изменена: {old_pct}% → {val}%",
+                    text=f"Ваша скидка изменена: <s>{old_pct}%</s> → {val}%",
+                    parse_mode=TextFormat.HTML,
                 )
             except Exception:
                 logger.warning("Could not notify customer %s of discount change", customer_max_id)
         await context.set_state(RegistrationState.REGISTERED)
+        await _send_customer_profile_by_id(bot, user_id, customer_id)
         return
 
     # Fallback: unrecognised message in idle state

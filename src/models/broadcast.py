@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import select, update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.orm import Broadcast, BroadcastRecipient, Customer
+from src.db.orm import Broadcast, BroadcastRecipient, Customer, Staff
 
 
 async def create(
@@ -37,6 +38,13 @@ async def create_recipients(
     await session.flush()
 
 
+async def get_by_id(session: AsyncSession, broadcast_id: int) -> Optional[Broadcast]:
+    result = await session.execute(
+        select(Broadcast).where(Broadcast.id == broadcast_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_eligible_customer_ids(
     session: AsyncSession, customer_ids: list[int] | None = None
 ) -> list[int]:
@@ -57,6 +65,34 @@ async def get_pending(session: AsyncSession) -> list[Broadcast]:
     return list(result.scalars())
 
 
+async def get_due_pending_broadcasts(session: AsyncSession) -> list[Broadcast]:
+    """Broadcasts with status=pending and scheduled_at <= now; ready to start delivery."""
+    now = datetime.now(tz=timezone.utc)
+    result = await session.execute(
+        select(Broadcast)
+        .where(Broadcast.status == "pending", Broadcast.scheduled_at <= now)
+        .order_by(Broadcast.scheduled_at)
+    )
+    return list(result.scalars())
+
+
+async def get_running_broadcasts_with_creator(session: AsyncSession) -> list[Broadcast]:
+    """Broadcasts with status=running; includes creator Staff for notification."""
+    result = await session.execute(
+        select(Broadcast)
+        .where(Broadcast.status == "running")
+        .options(selectinload(Broadcast.creator))
+    )
+    return list(result.scalars())
+
+
+async def set_status_running(session: AsyncSession, broadcast_id: int) -> None:
+    await session.execute(
+        update(Broadcast).where(Broadcast.id == broadcast_id).values(status="running")
+    )
+    await session.commit()
+
+
 async def cancel(session: AsyncSession, broadcast_id: int) -> Optional[Broadcast]:
     await session.execute(
         update(Broadcast)
@@ -73,10 +109,12 @@ async def get_pending_recipients(
     session: AsyncSession, broadcast_id: int
 ) -> list[BroadcastRecipient]:
     result = await session.execute(
-        select(BroadcastRecipient).where(
+        select(BroadcastRecipient)
+        .where(
             BroadcastRecipient.broadcast_id == broadcast_id,
             BroadcastRecipient.status == "pending",
         )
+        .options(selectinload(BroadcastRecipient.customer))
     )
     return list(result.scalars())
 

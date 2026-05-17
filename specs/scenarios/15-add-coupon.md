@@ -40,6 +40,7 @@ Customer receives new coupon and notification of issuance.
 7. Seller types integer 1–100 → `coupon_draft.max_payment_pct`.
 8. Bot saves Coupon to DB: `type=seller`, plus drafted value/valid_until/max_payment_pct.
 9. Bot sends customer notification (see Notification section).
+10. Bot sends seller updated customer profile (scenario 06 format).
 
 ## Notification
 
@@ -69,6 +70,7 @@ Bot sends customer:
 ## Postconditions
 - Coupon record created in DB linked to customer.
 - Customer received notification with value and expiry date.
+- Seller (Flow B) received updated customer profile.
 
 ## Open questions
 - ~~Seller-initiated coupon `type` value: `seller`. RESOLVED.~~

@@ -24,6 +24,7 @@ Seller clicks coupon button on customer profile message (scenario 06).
 4. Bot sets `Coupon.status = used`, `Coupon.used_at = now()` in DB
 5. Bot sends seller: «Купон «[coupon name]» использован.»
 6. Bot sends customer: «Купон «[coupon name]» использован.»
+7. Bot sends seller updated customer profile (scenario 06 format)
 
 ## Alternative flows
 
@@ -38,8 +39,7 @@ Seller clicks coupon button on customer profile message (scenario 06).
 ## Postconditions
 - `Coupon.status = used`, `Coupon.used_at` set in DB
 - Seller and customer both received notification naming the coupon
+- Seller received updated customer profile
 
 ## Open questions
-- [ ] "Coupon name" in notification messages: which field maps to display name? `type` field value, or separate field needed?
-- [ ] Coupon button payload: encodes `coupon.id`? Confirm routing mechanism.
-- [ ] After redemption: bot re-shows updated profile to seller automatically, or scenario ends?
+- [ ] "Coupon name" in notification messages: `type` field used as display name — confirm this is acceptable or separate `name` field needed.

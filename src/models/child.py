@@ -1,9 +1,10 @@
 from datetime import date
 from typing import Optional
 from sqlalchemy import select, update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.orm import Child
+from src.db.orm import Child, Customer
 
 
 async def create(
@@ -47,3 +48,30 @@ async def delete(session: AsyncSession, child_id: int) -> None:
     child = await get_by_id(session, child_id)
     if child:
         await session.delete(child)
+
+
+async def get_children_for_birthday_reminder(
+    session: AsyncSession, target_month: int, target_day: int
+) -> list[Child]:
+    """Return children whose birthdate month+day matches target, with customer eager-loaded."""
+    result = await session.execute(
+        select(Child)
+        .where(Child.birthdate.isnot(None))
+        .options(selectinload(Child.customer))
+    )
+    candidates = list(result.scalars())
+    return [
+        c for c in candidates
+        if c.birthdate is not None
+        and c.birthdate.month == target_month
+        and c.birthdate.day == target_day
+    ]
+
+
+async def set_birthday_reminded_year(
+    session: AsyncSession, child_id: int, year: int
+) -> None:
+    await session.execute(
+        update(Child).where(Child.id == child_id).values(birthday_reminded_year=year)
+    )
+    await session.commit()

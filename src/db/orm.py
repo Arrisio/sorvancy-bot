@@ -53,6 +53,7 @@ class Child(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     gender: Mapped[str] = mapped_column(String(10), nullable=False)
     birthdate: Mapped[date | None] = mapped_column(Date, nullable=True)
+    birthday_reminded_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default="NOW()", nullable=False
     )

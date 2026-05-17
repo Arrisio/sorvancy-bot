@@ -9,6 +9,7 @@ from maxapi.types import MessageCallback
 from maxapi.context import MemoryContext
 
 from src.states import RegistrationState, ProfileState, StaffState
+from src.db.orm import Customer, Staff
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import child as child_model
@@ -55,8 +56,8 @@ async def register_callback_router(dp):
         event: MessageCallback,
         context: MemoryContext,
         route: str = "registration",
-        customer=None,
-        staff=None,
+        customer: Customer | None = None,
+        staff: Staff | None = None,
     ):
         payload = event.callback.payload
         user_id = event.callback.user.user_id
@@ -167,6 +168,7 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
                 )
             except Exception:
                 logger.warning("Could not notify customer %s of coupon use", cust.max_user_id)
+        await _send_customer_profile_by_id(bot, user_id, c.customer_id)
         return
 
     if payload == "coupon:cancel":

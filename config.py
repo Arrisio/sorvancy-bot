@@ -25,3 +25,6 @@ BROADCAST_SEND_DELAY_SECONDS: float = float(os.environ.get("BROADCAST_SEND_DELAY
 DEEPLINK_BASE: str = os.environ.get("DEEPLINK_BASE", "")
 
 INVITE_SECRET: str = os.environ.get("INVITE_SECRET", "")
+
+BIRTHDAY_COUPON_VALUE: int = int(os.environ.get("BIRTHDAY_COUPON_VALUE", 300))
+BIRTHDAY_COUPON_VALID_DAYS: int = int(os.environ.get("BIRTHDAY_COUPON_VALID_DAYS", 7))
