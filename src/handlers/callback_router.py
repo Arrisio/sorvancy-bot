@@ -864,11 +864,11 @@ async def _complete_survey(bot, user_id, context):
     try:
         async with get_session_factory()() as session:
             async with session.begin():
-                cust = await customer_model.get_by_max_id(session, data["max_user_id"])
+                cust = await customer_model.get_by_max_id(session, user_id)
                 was_completed = cust.survey_completed if cust else False
                 cust = await customer_model.update_survey_data(
                     session,
-                    max_user_id=data["max_user_id"],
+                    max_user_id=user_id,
                     first_name=first_name,
                     last_name=last_name,
                     birthdate=birthdate,
