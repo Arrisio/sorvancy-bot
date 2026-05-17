@@ -11,6 +11,7 @@ from src.states import RegistrationState
 from src.keyboards import (
     registered_keyboard,
     profile_card_keyboard,
+    empty_profile_keyboard,
     MY_PROFILE_BTN_TEXT,
 )
 from src.db.connection import get_session_factory
@@ -64,6 +65,12 @@ async def register_profile_handlers(dp):
         if customer is None:
             await event.message.answer(
                 "Вы не зарегистрированы.", attachments=[registered_keyboard()]
+            )
+            return
+        if customer.first_name is None:
+            await event.message.answer(
+                "👤 Ваш профиль\n\nАнкета не заполнена",
+                attachments=[empty_profile_keyboard()],
             )
             return
         async with get_session_factory()() as session:

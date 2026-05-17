@@ -282,8 +282,17 @@ async def _handle_customer_callback(event, context, customer, state, payload, us
         await bot.send_message(
             user_id=user_id,
             text="Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
-            attachments=[back_keyboard()],
+            attachments=[cancel_keyboard("survey:cancel")],
         )
+        return
+
+    if payload == "survey:cancel" and state == RegistrationState.AWAITING_FIRST_NAME:
+        try:
+            await bot.delete_message(message_id=event.message.body.mid)
+        except Exception:
+            pass
+        await context.update_data(**{"draft.first_name": None, "draft.children": [], "draft.bought_for_self": False})
+        await context.set_state(RegistrationState.REGISTERED)
         return
 
     if payload == "survey:skip":
@@ -750,19 +759,12 @@ async def _handle_survey_skip(bot, user_id, state, context):
 async def _handle_survey_back(bot, user_id, state, context):
     data = await context.get_data()
 
-    if state == RegistrationState.AWAITING_FIRST_NAME:
-        await context.set_state(RegistrationState.REGISTERED)
-        await bot.send_message(
-            user_id=user_id,
-            text="Анкета отменена. Вы можете заполнить её позже.",
-            attachments=[registered_keyboard()],
-        )
-    elif state == RegistrationState.AWAITING_LAST_NAME:
+    if state == RegistrationState.AWAITING_LAST_NAME:
         await context.set_state(RegistrationState.AWAITING_FIRST_NAME)
         await bot.send_message(
             user_id=user_id,
             text="Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
-            attachments=[back_keyboard()],
+            attachments=[cancel_keyboard("survey:cancel")],
         )
     elif state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
         await context.set_state(RegistrationState.AWAITING_LAST_NAME)

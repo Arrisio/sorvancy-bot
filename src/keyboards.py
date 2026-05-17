@@ -252,6 +252,13 @@ def confirm_delete_seller_keyboard(staff_id: int):
     return builder.as_markup()
 
 
+def empty_profile_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(CallbackButton(text="Заполнить анкету", payload="survey:start"))
+    builder.row(CallbackButton(text="← Главное меню", payload="profile:back"))
+    return builder.as_markup()
+
+
 def cancel_keyboard(cancel_payload: str = "cancel"):
     builder = InlineKeyboardBuilder()
     builder.row(CallbackButton(text="Отмена", payload=cancel_payload))
