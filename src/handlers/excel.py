@@ -7,7 +7,7 @@ from maxapi.types.input_media import InputMediaBuffer
 from maxapi.filters import F
 from maxapi.context import MemoryContext
 
-from src.keyboards import EXCEL_BTN_TEXT
+from src.keyboards import EXCEL_BTN_TEXT, superuser_keyboard
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import child as child_model
@@ -48,6 +48,11 @@ async def register_excel_handlers(dp):
             user_id=user_id,
             text="Выгрузка клиентов:",
             attachments=[media],
+        )
+        await event.bot.send_message(
+            user_id=user_id,
+            text="Готово.",
+            attachments=[superuser_keyboard()],
         )
 
 

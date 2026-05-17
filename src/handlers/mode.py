@@ -3,7 +3,7 @@ from maxapi.types import MessageCreated, Command
 from maxapi.context import MemoryContext
 
 from src.states import RegistrationState
-from src.keyboards import superuser_keyboard
+from src.keyboards import superuser_keyboard, registered_keyboard
 from src.db.connection import get_session_factory
 from src.models import staff as staff_model
 from src.db.orm import Staff
@@ -37,7 +37,8 @@ async def register_mode_handlers(dp):
         if new_mode:
             await context.set_state(RegistrationState.REGISTERED)
             await event.message.answer(
-                "Режим клиента включён. Ваши сообщения обрабатываются как от покупателя."
+                "Режим клиента включён. Ваши сообщения обрабатываются как от покупателя.",
+                attachments=[registered_keyboard()],
             )
         else:
             await context.set_state(RegistrationState.REGISTERED)

@@ -11,6 +11,7 @@ from maxapi.context import MemoryContext
 from src.states import StaffState, RegistrationState
 from src.keyboards import (
     delete_seller_keyboard,
+    cancel_keyboard,
     STAFF_FIND_BTN_TEXT,
     STAFF_LIST_BTN_TEXT,
     ADD_SELLER_BTN_TEXT,
@@ -125,7 +126,10 @@ async def register_staff_handlers(dp):
         if route != "staff":
             return
         await context.set_state(StaffState.AWAITING_CUSTOMER_ID)
-        await event.message.answer("Пришлите номер клиента")
+        await event.message.answer(
+            "Пришлите номер клиента",
+            attachments=[cancel_keyboard("find_customer:cancel")],
+        )
 
 
 async def _send_customer_profile_by_id(bot, staff_user_id: int, customer_id: int):

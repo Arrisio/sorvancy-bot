@@ -205,10 +205,10 @@ async def _send_discount_qr(bot, user_id: int):
     try:
         qr_bytes = make_qr_png(customer.id)
         media = InputMediaBuffer(buffer=qr_bytes, filename="discount_qr.png")
-        await bot.send_message(user_id=user_id, text=text, attachments=[media])
+        await bot.send_message(user_id=user_id, text=text, attachments=[media, registered_keyboard()])
     except Exception:
         logger.exception("QR generation failed for user %s", user_id)
-        await bot.send_message(user_id=user_id, text=text)
+        await bot.send_message(user_id=user_id, text=text, attachments=[registered_keyboard()])
     async with get_session_factory()() as session:
         async with session.begin():
             await customer_model.update_field(
