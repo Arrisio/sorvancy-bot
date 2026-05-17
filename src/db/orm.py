@@ -32,6 +32,9 @@ class Customer(Base):
     opt_out_marketing: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
     )
+    last_touch: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
 
     children: Mapped[list["Child"]] = relationship(
         back_populates="customer", cascade="all, delete-orphan"

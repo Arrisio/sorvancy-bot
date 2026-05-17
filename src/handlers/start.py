@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from maxapi.types import BotStarted, MessageCreated, Command
 from maxapi.types.input_media import InputMediaBuffer
 from maxapi.filters import F
@@ -17,7 +18,7 @@ from src.db.orm import Staff, Customer
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import staff as staff_model
-from src.services.discount import make_qr_png
+from src.services.discount import make_qr_png, customer_qr_deeplink
 from src.services.invite import verify_invite_token
 
 logger = logging.getLogger(__name__)
@@ -185,26 +186,22 @@ async def _send_discount_qr(bot, user_id: int):
             attachments=[unregistered_keyboard()],
         )
         return
+    link = customer_qr_deeplink(customer.id)
+    text = (
+        f"Покажите этот QR-код продавцу\n"
+        f"Номер клиента: {customer.id}\n"
+        f"Скидка: {customer.discount_percent}%\n\n"
+        f"Ссылка для продавца:\n{link}"
+    )
     try:
         qr_bytes = make_qr_png(customer.id)
         media = InputMediaBuffer(buffer=qr_bytes, filename="discount_qr.png")
-        await bot.send_message(
-            user_id=user_id,
-            text=(
-                f"Покажите этот QR-код продавцу\n"
-                f"Номер клиента: {customer.id}\n"
-                f"Скидка: {customer.discount_percent}%"
-            ),
-            attachments=[media],
-        )
+        await bot.send_message(user_id=user_id, text=text, attachments=[media])
     except Exception:
         logger.exception("QR generation failed for user %s", user_id)
-        from src.services.discount import customer_qr_deeplink
-        await bot.send_message(
-            user_id=user_id,
-            text=(
-                f"Ваша ссылка для продавца:\n{customer_qr_deeplink(customer.id)}\n"
-                f"Номер клиента: {customer.id}\n"
-                f"Скидка: {customer.discount_percent}%"
-            ),
-        )
+        await bot.send_message(user_id=user_id, text=text)
+    async with get_session_factory()() as session:
+        async with session.begin():
+            await customer_model.update_field(
+                session, customer.id, last_touch=datetime.now(tz=timezone.utc)
+            )
