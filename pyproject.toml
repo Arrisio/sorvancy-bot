@@ -1,7 +1,7 @@
 [project]
 name = "max-bot"
 version = "0.1.0"
-description = "Max messenger bot for Соrванцы children's clothing store"
+description = "Max messenger bot for Сорванцы children's clothing store"
 requires-python = ">=3.11"
 dependencies = [
     "maxapi>=0.9.4",
@@ -9,4 +9,5 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0",
     "python-dotenv>=1.0",
     "qrcode[pil]>=7.0",
+    "openpyxl>=3.1",
 ]

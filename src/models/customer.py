@@ -13,6 +13,18 @@ async def get_by_max_id(session: AsyncSession, max_user_id: int) -> Optional[Cus
     return result.scalar_one_or_none()
 
 
+async def get_by_id(session: AsyncSession, customer_id: int) -> Optional[Customer]:
+    result = await session.execute(
+        select(Customer).where(Customer.id == customer_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_all(session: AsyncSession) -> list[Customer]:
+    result = await session.execute(select(Customer).order_by(Customer.id))
+    return list(result.scalars())
+
+
 async def create(
     session: AsyncSession,
     max_user_id: int,
@@ -36,14 +48,52 @@ async def update_survey_data(
     session: AsyncSession,
     max_user_id: int,
     first_name: str,
+    last_name: Optional[str],
     birthdate: Optional[date],
+    phone: Optional[str],
+    survey_completed: bool,
 ) -> Optional[Customer]:
     await session.execute(
         update(Customer)
         .where(Customer.max_user_id == max_user_id)
-        .values(first_name=first_name, birthdate=birthdate)
+        .values(
+            first_name=first_name,
+            last_name=last_name,
+            birthdate=birthdate,
+            phone=phone,
+            survey_completed=survey_completed,
+        )
     )
     return await get_by_max_id(session, max_user_id)
+
+
+async def update_field(
+    session: AsyncSession, customer_id: int, **kwargs
+) -> Optional[Customer]:
+    await session.execute(
+        update(Customer).where(Customer.id == customer_id).values(**kwargs)
+    )
+    result = await session.execute(
+        select(Customer).where(Customer.id == customer_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def set_discount(
+    session: AsyncSession, customer_id: int, discount_percent: int
+) -> Optional[Customer]:
+    return await update_field(session, customer_id, discount_percent=discount_percent)
+
+
+async def toggle_opt_out(
+    session: AsyncSession, customer_id: int
+) -> Optional[Customer]:
+    customer = await get_by_id(session, customer_id)
+    if customer is None:
+        return None
+    return await update_field(
+        session, customer_id, opt_out_marketing=not customer.opt_out_marketing
+    )
 
 
 async def is_registered(session: AsyncSession, max_user_id: int) -> bool:

@@ -10,7 +10,7 @@ def registration_complete_message() -> str:
 
 def survey_offer_message() -> str:
     return (
-        "Заполните анкету и получите ещё +2% к скидке!\n\n"
+        "Заполните анкету — и получите купон на 300 ₽!\n\n"
         "Расскажите о себе и своих детях — займёт 2 минуты."
     )
 
@@ -30,22 +30,43 @@ def discount_card(first_name: str) -> str:
 def profile_message(customer, children: list) -> str:
     lines = [
         "👤 Ваш профиль",
-        f"Имя: {customer.first_name or '—'}",
-        f"Скидка: {customer.discount_percent}%",
-        f"Зарегистрирован: {customer.registered_at.strftime('%d.%m.%Y')}",
+        f"Имя: {customer.first_name or 'не указано'}",
+        f"Фамилия: {customer.last_name or 'не указано'}",
+        f"Дата рождения: {customer.birthdate.strftime('%d.%m.%Y') if customer.birthdate else 'не указано'}",
+        f"Телефон: {customer.phone or 'не указано'}",
     ]
-    if customer.birthdate:
-        lines.append(f"Дата рождения: {customer.birthdate.strftime('%d.%m.%Y')}")
     if children:
-        lines.append("\nДети:")
-        for ch in children:
+        lines.append("\n👧 Дети:")
+        for i, ch in enumerate(children, 1):
             gender_str = "Мальчик" if ch.gender == "male" else "Девочка"
-            lines.append(f"  • {ch.name}, {gender_str}, {ch.birthdate.strftime('%d.%m.%Y')}")
+            bdate = ch.birthdate.strftime("%d.%m.%Y") if ch.birthdate else "—"
+            lines.append(f"  {i}. {ch.name} · {gender_str} · {bdate}")
     return "\n".join(lines)
 
 
-def make_qr_png(user_id: int, discount_percent: int) -> bytes:
-    data = f"SORVANCY:DISCOUNT:{user_id}:{discount_percent}%"
+def staff_customer_profile_message(customer, coupons: list) -> str:
+    name = " ".join(filter(None, [customer.first_name, customer.last_name])) or "—"
+    lines = [
+        f"👤 {name}",
+        f"Номер клиента: {customer.id}",
+        f"Скидка: {customer.discount_percent}%",
+    ]
+    if coupons:
+        lines.append("\n🎟 Купоны:")
+        for i, c in enumerate(coupons, 1):
+            until = c.valid_until.strftime("%d.%m.%Y")
+            lines.append(f"  {i}. Купон «{c.type}» — {c.value} ₽, действует до {until}")
+    else:
+        lines.append("\nНет активных купонов.")
+    return "\n".join(lines)
+
+
+def customer_qr_deeplink(customer_id: int) -> str:
+    return f"{config.DEEPLINK_BASE}customer_{customer_id}"
+
+
+def make_qr_png(customer_id: int) -> bytes:
+    data = customer_qr_deeplink(customer_id)
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(data)
     qr.make(fit=True)
