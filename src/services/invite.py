@@ -1,7 +1,10 @@
 import base64
 import hashlib
 import hmac
-from datetime import date
+from datetime import datetime, date
+from zoneinfo import ZoneInfo
+
+_PERM_TZ = ZoneInfo("Asia/Yekaterinburg")
 
 import config
 
@@ -12,7 +15,7 @@ def _sign(owner_id: int, date_str: str) -> str:
 
 
 def make_invite_token(owner_id: int) -> str:
-    date_str = date.today().isoformat()
+    date_str = datetime.now(_PERM_TZ).date().isoformat()
     sig = _sign(owner_id, date_str)
     payload = f"{owner_id}:{date_str}:{sig}"
     return base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
@@ -39,7 +42,7 @@ def verify_invite_token(token: str) -> tuple[int | None, str | None]:
     except ValueError:
         return None, "invalid"
 
-    if (date.today() - token_date).days > 1:
+    if (datetime.now(_PERM_TZ).date() - token_date).days > 1:
         return None, "expired"
 
     return owner_id, None

@@ -87,6 +87,16 @@ async def create_birthday_coupon(
     return coupon
 
 
+async def expire_coupons(session: AsyncSession) -> int:
+    now = datetime.now(tz=timezone.utc)
+    result = await session.execute(
+        update(Coupon)
+        .where(Coupon.status == "active", Coupon.valid_until <= now)
+        .values(status="expired")
+    )
+    return result.rowcount
+
+
 async def mark_used(session: AsyncSession, coupon_id: int) -> Optional[Coupon]:
     now = datetime.now(tz=timezone.utc)
     result = await session.execute(

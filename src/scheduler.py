@@ -6,6 +6,9 @@ Background asyncio scheduler tasks.
 import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+_PERM_TZ = ZoneInfo("Asia/Yekaterinburg")
 
 import pymorphy3
 
@@ -24,6 +27,7 @@ _morph = pymorphy3.MorphAnalyzer()
 
 BROADCAST_DELIVERY_INTERVAL = 3600  # seconds
 BIRTHDAY_CHECK_INTERVAL = 86400     # seconds
+COUPON_EXPIRY_INTERVAL = 86400      # seconds
 
 
 def _to_genitive(name: str) -> str:
@@ -105,6 +109,19 @@ async def broadcast_delivery_loop(bot) -> None:
         await asyncio.sleep(BROADCAST_DELIVERY_INTERVAL)
 
 
+async def coupon_expiry_loop() -> None:
+    while True:
+        try:
+            async with get_session_factory()() as session:
+                async with session.begin():
+                    count = await coupon_model.expire_coupons(session)
+            if count:
+                logger.info("Coupon expiry: marked %d coupons as expired", count)
+        except Exception:
+            logger.exception("coupon_expiry_loop error")
+        await asyncio.sleep(COUPON_EXPIRY_INTERVAL)
+
+
 async def birthday_reminder_loop(bot) -> None:
     while True:
         try:
@@ -115,7 +132,7 @@ async def birthday_reminder_loop(bot) -> None:
 
 
 async def _run_birthday_reminders(bot) -> None:
-    today = date.today()
+    today = datetime.now(_PERM_TZ).date()
     target = today + timedelta(days=3)
     target_year = target.year
 
@@ -150,7 +167,7 @@ async def _run_birthday_reminders(bot) -> None:
                     )
 
             name_gent = _to_genitive(child.name)
-            valid_until_str = coupon.valid_until.strftime("%d.%m.%Y")
+            valid_until_str = coupon.valid_until.astimezone(_PERM_TZ).strftime("%d.%m.%Y")
 
             await bot.send_message(
                 user_id=cust.max_user_id,

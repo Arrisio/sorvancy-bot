@@ -6,6 +6,9 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+_PERM_TZ = ZoneInfo("Asia/Yekaterinburg")
 
 from maxapi.types import MessageCreated
 from maxapi.types.message import NewMessageLink
@@ -35,17 +38,17 @@ def _parse_scheduled_at(text: str) -> datetime | None:
     m = re.match(r"(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})$", text)
     if m:
         d, mo, h, mi = int(m[1]), int(m[2]), int(m[3]), int(m[4])
-        year = datetime.now(tz=timezone.utc).year
+        year = datetime.now(_PERM_TZ).year
         try:
-            return datetime(year, mo, d, h, mi, tzinfo=timezone.utc)
+            return datetime(year, mo, d, h, mi, tzinfo=_PERM_TZ)
         except ValueError:
             return None
     m = re.match(r"(\d{1,2})\.(\d{1,2})$", text)
     if m:
         d, mo = int(m[1]), int(m[2])
-        year = datetime.now(tz=timezone.utc).year
+        year = datetime.now(_PERM_TZ).year
         try:
-            return datetime(year, mo, d, 11, 0, tzinfo=timezone.utc)
+            return datetime(year, mo, d, 11, 0, tzinfo=_PERM_TZ)
         except ValueError:
             return None
     return None
