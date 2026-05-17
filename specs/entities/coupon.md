@@ -26,7 +26,7 @@ Single-use discount coupon issued to a customer as a benefit; lets customer pay 
 - Scheduled job flips `status → expired` where `valid_until ≤ now()` AND `status = active`
 - Customer may hold multiple active coupons simultaneously
 - Multiple coupons may be applied to one purchase (stacking allowed)
-- Coupon issued automatically on survey completion (`type = survey_completed`)
+- Coupon issued automatically when Customer.survey_completed transitions False → True (`type = anket`)
 
 ## Relations
 
@@ -34,6 +34,6 @@ Single-use discount coupon issued to a customer as a benefit; lets customer pay 
 
 ## Open questions
 
-- [ ] `survey_completed` coupon: what `value`, `max_payment_pct`, and `valid_until` duration?
+- ~~`anket` coupon parameters: value=300, max_payment_pct=30, valid_until=now()+1 month. RESOLVED.~~
 - [ ] Stacking limit: all active coupons apply, or capped at N per purchase?
 - [ ] `revoked` status: actor and interface TBD.

@@ -9,16 +9,17 @@ Kid belonging to Customer. Collected during survey. Drives birthday and school-y
 |-------|------|-------------|-------|
 | id | int | PK, auto | Internal ID |
 | customer_id | int | FK → customers.id, not null | ondelete=CASCADE |
-| name | varchar(255) | not null | Display name; no length validation in current code |
-| gender | varchar(10) | not null | 'male' or 'female'; DB CHECK constraint |
-| birthdate | date | not null | Used for birthday campaign targeting |
+| name | varchar(255) | not null | Display name |
+| gender | varchar(10) | not null | 'male' or 'female'; DB CHECK constraint; required, no skip |
+| birthdate | date | nullable | Optional; null if skipped; used for birthday campaign targeting |
 | created_at | timestamptz | not null, default now() | |
 
 ## Invariants
 
 - gender must be 'male' or 'female' (enforced by DB CHECK constraint `gender_check`)
-- At least 1 Child per Customer after survey completion (enforced by survey flow logic)
-- Children created atomically with survey data update in single transaction
+- Child record created when gender is confirmed in survey (step 6) with name + gender; birthdate updated at step 7
+- name stored in session between steps 5 and 6 (not in DB) until gender is available
+- 0 children per Customer is valid when «Купить для себя» path taken
 - Deleted cascading when Customer removed
 
 ## Relations
@@ -33,6 +34,4 @@ Kid belonging to Customer. Collected during survey. Drives birthday and school-y
 
 ## Open questions
 
-- [ ] No validation that child birthdate is in the past or within reasonable range (0–18 years). Add?
-- [ ] No max child count per customer. Limit needed?
 - [ ] Duplicate children names not prevented. OK?

@@ -1,86 +1,191 @@
 # Scenario: Survey (Phase 2 — Profile Enrichment)
 
 ## Goal
-Registered user optionally enriches profile with name, birthdate, and children data. Unlocks fuller discount card.
+User fills in profile with personal data and children; receives 300-ruble coupon on first successful completion.
 
 ## Actors
-- User (registered, FSM state = REGISTERED)
+- User (registered)
 - Bot
 - Database
 
 ## Trigger
-User clicks "Заполнить анкету" on survey offer message (payload `survey:start`)
+User clicks «Заполнить анкету» button (payload `survey:start`).
 
 ## Preconditions
-- Customer exists in DB (phase 1 complete)
-- FSM state = REGISTERED (or user already registered, detected by DB lookup)
+- Customer record exists in DB (scenario 01 complete)
+- Customer.survey_completed = false
+- FSM state = REGISTERED
+
+## Draft model
+
+All answers accumulated in MemoryContext (`draft.*` keys) during survey. Single DB write at step 10 (contact step). No partial DB writes mid-flow. Children exist only in draft until confirmation → save.
 
 ## Main flow
 
-| Step | State | Bot action | User action |
-|------|-------|-----------|-------------|
-| 1 | REGISTERED | Delete survey offer message. Set state = AWAITING_FIRST_NAME. Send "Как вас зовут?" + [← Назад] | Types name |
-| 2 | AWAITING_FIRST_NAME | Store `first_name`. Set state = AWAITING_CUSTOMER_BIRTHDATE. Send "Ваша дата рождения? (ДД.ММ.ГГГГ)" | Types date |
-| 3 | AWAITING_CUSTOMER_BIRTHDATE | Parse date (any non-digit separator). Store `customer_birthdate` as ISO string. Set state = AWAITING_CHILD_NAME. Send child prompt | Types child name |
-| 4 | AWAITING_CHILD_NAME | Store `current_child_name`. Set state = AWAITING_CHILD_GENDER. Send gender keyboard | Clicks Мальчик/Девочка |
-| 5 | AWAITING_CHILD_GENDER | Store `current_child_gender`. Set state = AWAITING_CHILD_BIRTHDATE. Send child DOB prompt | Types child date |
-| 6 | AWAITING_CHILD_BIRTHDATE | Parse date. Store `current_child_birthdate`. Set state = AWAITING_MORE_CHILDREN. Send "Добавить ещё?" | Clicks Да/Нет |
-| 7 | AWAITING_MORE_CHILDREN | Commit child to `children` list. If Да → step 4. If Нет → complete | |
-| 8 | — | `update_survey_data` + `child_model.create` × N in single transaction. Set state = REGISTERED. Send confirmation | |
+Progress shown in each message: «Шаг N из 4» for customer steps; «Ребёнок N · шаг M из 3» for child steps.
 
-## Back navigation (payload `back`)
+| Step | State | Bot sends | User action |
+|------|-------|----------|-------------|
+| 1 | REGISTERED | Delete survey offer message. Set AWAITING_NAME. «Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:» + [← Назад] | Types name |
+| 2 | AWAITING_NAME | Store `draft.first_name`. Set AWAITING_LAST_NAME. «Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. Можно пропустить 😊» + [Пропустить] [← Назад] | Types or skips |
+| 3 | AWAITING_LAST_NAME | Store `draft.last_name` (null if skipped). Set AWAITING_CUSTOMER_BIRTHDATE. «Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
+| 4 | AWAITING_CUSTOMER_BIRTHDATE | Store `draft.birthdate` (null if skipped). Set AWAITING_CHILD_NAME. «Шаг 4 из 4 · Как зовут вашего ребёнка?» + (if 0 children in draft: [Купить для себя]) + [← Назад] | Types name or clicks Купить для себя |
+| 5 | AWAITING_CHILD_NAME | Append child draft entry `{name}`. Set AWAITING_CHILD_GENDER. «Ребёнок N · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? Подберём подходящие предложения:» + [Мальчик] [Девочка] [← Назад] | Clicks button |
+| 6 | AWAITING_CHILD_GENDER | Store `gender` into current child draft. Set AWAITING_CHILD_BIRTHDATE. «Ребёнок N · шаг 2 из 3 · Когда день рождения у ребёнка? Будем поздравлять! 🎉 (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
+| 7 | AWAITING_CHILD_BIRTHDATE | Store `birthdate` into current child draft (null if skipped). Set AWAITING_MORE_CHILDREN. «Ребёнок N · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?» + [Да] [Нет] | Clicks button |
+| 8 | AWAITING_MORE_CHILDREN | **Да** → new child draft entry, set AWAITING_CHILD_NAME, go to step 5. **Нет** → set AWAITING_CONFIRMATION, send confirmation card (see section below). | Clicks button on confirmation card |
+| 9 | AWAITING_CONFIRMATION | User reviews draft. May edit fields inline (see section below). On [✅ Сохранить] → set AWAITING_CONTACT, send contact prompt. | Clicks Сохранить or edits |
+| 10 | AWAITING_CONTACT | On contact share or [Завершить]: write all draft data to DB in single transaction. Compute `survey_completed`. If False → True: create Coupon. Set REGISTERED. Send «Анкета заполнена! Спасибо 🎉». | Shares contact or clicks Завершить |
 
-| Current state | Navigates to | Bot message |
-|--------------|-------------|-------------|
-| AWAITING_FIRST_NAME | REGISTERED | "Анкета отменена." + `registered_keyboard` |
-| AWAITING_CUSTOMER_BIRTHDATE | AWAITING_FIRST_NAME | Re-ask name |
-| AWAITING_CHILD_NAME (0 children committed) | AWAITING_CUSTOMER_BIRTHDATE | Re-ask customer DOB |
-| AWAITING_CHILD_NAME (≥1 child committed) | AWAITING_MORE_CHILDREN | Re-ask "Добавить ещё?" |
-| AWAITING_CHILD_GENDER | AWAITING_CHILD_NAME | Re-ask child name |
-| AWAITING_CHILD_BIRTHDATE | AWAITING_CHILD_GENDER | Re-ask gender |
-| AWAITING_MORE_CHILDREN | AWAITING_CHILD_BIRTHDATE | Re-ask child DOB |
+## Confirmation card (step 8 → AWAITING_CONFIRMATION)
+
+Bot sends one message with draft summary:
+
+```
+📋 Проверьте данные перед сохранением:
+
+👤 [Имя] [Фамилия]
+🎂 [дата] / не указана
+
+👧 Дети:
+  1. [Имя] · [Пол] · [д.р. / не указана]
+  2. …
+```
+
+Inline keyboard:
+```
+[✏️ Имя]            [✏️ Фамилия]
+[✏️ Дата рождения]  [👶 Дети]
+[✅ Сохранить]
+```
+
+If 0 children in draft: no «Дети» section and no [👶 Дети] button.
+
+### Inline editing from confirmation card
+
+Pressing any [✏️ X] button while in AWAITING_CONFIRMATION:
+- State stays AWAITING_CONFIRMATION (bot tracks `draft.editing_field` in session)
+- Bot sends single re-ask message for that field (same wording as original step, without step counter)
+- User answers → draft updated → bot edits confirmation card message in place → clears `draft.editing_field`
+
+Pressing [👶 Дети]:
+- Bot sends children draft list (see Children management section below)
+- State stays AWAITING_CONFIRMATION; sub-navigation tracked via session
+- After any change: bot re-sends updated confirmation card
+
+### Children management within AWAITING_CONFIRMATION
+
+Children list message:
+```
+👶 Дети в анкете:
+  1. Маша · Девочка · 12.06.2018
+  2. Артём · Мальчик · —
+
+[✏️ Маша]  [✏️ Артём]
+[➕ Добавить ребёнка]
+[← Назад к сводке]
+```
+
+[✏️ Child] → child draft card:
+```
+👧 Маша · Девочка · 12.06.2018
+
+[✏️ Имя]   [✏️ Пол]   [✏️ Дата р.]
+[🗑 Удалить из анкеты]
+[← Назад к списку]
+```
+
+Editing child field: bot asks one question → draft updated → re-show child card.
+[🗑 Удалить] → confirm prompt → remove from `draft.children` → re-show children list.
+[➕ Добавить ребёнка] → 3-step child sub-form (same as steps 5–7) → add to `draft.children` → re-show children list.
+[← Назад к сводке] → re-show confirmation card.
+
+## Contact prompt (step 9 → AWAITING_CONTACT)
+
+«Последний шаг — поделитесь контактом как запасным каналом связи. Если что-то случится с ботом, мы не потеряем вас! Это необязательно.»
+Buttons: [📞 Поделиться контактом] [Завершить заполнение анкеты] [← Назад]
+
+[← Назад] from contact prompt → re-show confirmation card (back to AWAITING_CONFIRMATION).
+
+## Back navigation
+
+Child draft data is NOT deleted on back — stays in `draft.children`. Children can only be deleted via explicit [🗑] action on confirmation card.
+
+| Current state | Back navigates to |
+|--------------|------------------|
+| AWAITING_NAME | REGISTERED — ask confirm cancel, then «Анкета отменена.» + discard draft |
+| AWAITING_LAST_NAME | AWAITING_NAME — re-ask name |
+| AWAITING_CUSTOMER_BIRTHDATE | AWAITING_LAST_NAME — re-ask last name |
+| AWAITING_CHILD_NAME (child index=1) | AWAITING_CUSTOMER_BIRTHDATE |
+| AWAITING_CHILD_NAME (child index=N, N>1) | AWAITING_MORE_CHILDREN — re-ask «Хотите добавить ещё?» (not child N−1 data) |
+| AWAITING_CHILD_GENDER | AWAITING_CHILD_NAME — re-ask child name |
+| AWAITING_CHILD_BIRTHDATE | AWAITING_CHILD_GENDER — re-ask child gender |
+| AWAITING_MORE_CHILDREN | AWAITING_CHILD_BIRTHDATE — re-ask child DOB |
+| AWAITING_CONFIRMATION | AWAITING_MORE_CHILDREN (if children in draft) / AWAITING_CUSTOMER_BIRTHDATE (if no children) |
+| AWAITING_CONTACT | AWAITING_CONFIRMATION — re-show confirmation card |
+
+**Pre-fill hint on back:** when re-asking a step that already has a draft value, bot adds inline button:
+`[Оставить «[current value]»]` — pressing it keeps the draft value and advances to next step.
 
 ## Alternative flows
 
-### A1: Invalid date input (steps 2 or 6)
-- Bot: "Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):"
+### A1: Invalid date input
+- Bot: «Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):»
 - State unchanged, user retries
 
-### A2: User clicks "Пропустить" (payload `survey:skip`)
-- Survey offer message deleted
-- State stays REGISTERED, no data collected, no DB changes
+### A2: Resume interrupted survey
+- Trigger: user clicks «Заполнить анкету» when survey_completed = false and draft or partial data exists
+- Bot sends:
+  ```
+  👋 Вы уже начали заполнять анкету!
 
-### A3: DB write fails at step 8
-- Transaction rolled back (no partial data)
-- User sees: "Ошибка при сохранении. Попробуйте /start снова." + `registered_keyboard`
-- FSM not cleared
+  ✅ Имя: Анна
+  ✅ Фамилия: Смирнова
+  ⏳ Осталось: дата рождения, данные детей
+
+  [▶️ Продолжить]  [🔄 Начать заново]
+  ```
+- [▶️ Продолжить] → restore draft, set FSM to first unanswered step
+- [🔄 Начать заново] → clear draft, set AWAITING_NAME, go to step 1
+
+### A3: «Купить для себя» (step 4, 0 children in draft)
+- Append `draft.bought_for_self = true`
+- Skip steps 5–8; set AWAITING_CONFIRMATION
+- Confirmation card shows no children section
+- survey_completed will be True regardless of children
+
+### A4: DB write fails at step 10
+- Bot: «Ошибка при сохранении. Попробуйте ещё раз.»
+- State stays AWAITING_CONTACT; draft preserved; retry possible
 
 ## MemoryContext keys during survey
 
-| Key | Set when |
-|-----|----------|
-| max_user_id | Phase 1 |
-| max_username | Phase 1 |
-| children | `[]` at phase 1; appended per child |
-| survey_offer_mid | After phase 1 (for deletion) |
-| first_name | Step 2 |
-| customer_birthdate | Step 3 (ISO string) |
-| current_child_name | Step 4 |
-| current_child_gender | Step 5 |
-| current_child_birthdate | Step 6 |
+| Key | Content |
+|-----|---------|
+| `max_user_id` | Customer identifier |
+| `survey_offer_mid` | Message ID of survey offer (deleted at step 1) |
+| `draft.first_name` | Q1 answer |
+| `draft.last_name` | Q2 answer (null if skipped) |
+| `draft.birthdate` | Q3 answer (null if skipped) |
+| `draft.bought_for_self` | True if «Купить для себя» taken |
+| `draft.children` | List of `{name, gender, birthdate}` dicts |
+| `draft.current_child_index` | 1-based index of child being filled |
+| `draft.editing_field` | Field being edited from confirmation card (cleared after update) |
 
 ## Postconditions
-- Customer.first_name and Customer.birthdate updated in DB
-- 1..N Child rows created, linked to Customer
+- Single DB transaction at step 10:
+  - Customer.first_name, last_name, birthdate, phone updated
+  - Customer.survey_completed set (see rule below)
+  - 0..N Child records created, linked to Customer
+- survey_completed = True if: bought_for_self path OR ≥1 child with birthdate NOT NULL
+- Coupon (type=`anket`, value=300, max_payment_pct=30, valid_until=now()+1 month) created only if survey_completed changes False → True
 - FSM state = REGISTERED
-- Bot sends "Анкета заполнена! Спасибо 🎉"
 
 ## NFR refs
-- pii.md: child birthdate and name handling
+- pii.md: child birthdate, name, phone handling
 
 ## Open questions
-- [ ] Completion message says "скидка увеличена" — discount_percent not incremented in code. Fix copy or implement +2%.
-- [ ] MemoryContext lost on bot restart mid-survey — user must restart. Acceptable for MVP?
-- [ ] No length validation on first_name or child name. Add min/max?
-- [ ] No range validation on child birthdate (should be in past, age 0–18). Add?
-- [ ] Re-running survey overwrites first_name and birthdate, adds more children (duplicates possible). Desired behavior?
+- [ ] Draft persistence across bot restarts: MemoryContext is lost on restart. Resume (A2) requires draft to survive. Options: write Customer fields immediately + hold children in draft; or persist draft JSON to DB. Decide before implementation.
+- [ ] Confirmation card editing: Max messenger API supports `editMessageText`? If not, bot must send new card message on each edit.
+- [ ] Re-running survey after survey_completed = True: redirect to profile editing scenario (05) or block?
+- [ ] Cancel from AWAITING_NAME: ask confirmation before discarding draft, or discard immediately?
