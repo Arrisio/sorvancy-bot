@@ -17,7 +17,7 @@ User clicks "Скидка" button.
 
 1. Bot loads Customer from DB by `max_user_id`
 2. Bot generates QR PNG encoding Max Messenger deeplink containing customer identifier
-3. Bot sends message with QR image: «Покажите этот QR-код продавцу»
+3. Bot sends message with QR image and customer number: «Покажите этот QR-код продавцу» + display of customer number (exact field and label TBD — see Open questions)
 4. User shows QR to seller; seller scans → scenario 06 triggers
 
 ## Alternative flows
@@ -40,3 +40,4 @@ User clicks "Скидка" button.
 - [ ] Customer identifier in deeplink: `max_user_id`, internal `id`, or signed token?
 - [ ] Previous QR data format was `SORVANCY:DISCOUNT:{max_user_id}:{discount_percent}%` (old scenario 03 + src/ code). Now replaced by deeplink. Code divergence — update needed.
 - [ ] Message text: show customer's discount percent alongside QR, or instruction only?
+- [ ] Customer number field: which field serves as «номер клиента» shown alongside QR — internal DB `id`, `max_user_id`, or other? Must match value accepted in scenario 10.

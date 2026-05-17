@@ -17,12 +17,14 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 | survey_completed | boolean | not null, default false | True when «Купить для себя» taken, OR ≥1 child has birthdate NOT NULL at survey finish |
 | discount_percent | int | not null, default 10 | Set from `config.DISCOUNT_PERCENT` at creation |
 | registered_at | timestamptz | not null, default now() | Phase 1 completion time |
+| opt_out_marketing | boolean | not null, default false | Customer opted out of personal offers; excludes from all Broadcast recipient lists |
 
 ## Invariants
 
 - One Customer per max_user_id (unique constraint in DB)
 - Created on "Зарегистрироваться" button click, before any survey data collected
 - discount_percent set from env config at creation; not recalculated
+- opt_out_marketing = true → Customer excluded from all Broadcast recipient lists; flag toggled by Customer from own profile
 - first_name, last_name, birthdate, phone: null until survey step populates them
 
 ## Survey completion signal

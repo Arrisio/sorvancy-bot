@@ -35,10 +35,17 @@ User clicks «Мой профиль» button in registered keyboard (payload `pr
 [✏️ Имя]            [✏️ Фамилия]
 [✏️ Дата рождения]  [✏️ Телефон]
 [👶 Управление детьми]
+[Отказаться от рассылок] / [Получать рассылки]
 [← Главное меню]
 ```
 
 Fields with null values shown as «не указано». If 0 children: no children section; [👶 Управление детьми] still shown.
+
+Opt-out button label depends on `opt_out_marketing` flag:
+- `false` → button: «Отказаться от рассылок»
+- `true` → button: «Получать рассылки»
+
+Clicking either toggles `opt_out_marketing` in DB and refreshes profile card with updated button label.
 
 2. User presses any button.
 

@@ -23,3 +23,8 @@
 | Deeplink | Max Messenger URL embedded in customer's QR code. When followed by seller, triggers "show customer profile" command in bot. Synonymous with Ссылка in project terminology. |
 | Ссылка | Project term for deeplink. See Deeplink. |
 | Профиль (staff view) | Bot message sent to Seller showing customer's discount percent, active coupons (value + expiry), inline coupon buttons, and "Изменить % скидки" button. Triggered by deeplink (scenario 06). Distinct from customer-facing «Мой профиль». |
+| Broadcast / Рассылка | Mass message forwarded to a filtered set of customers. Created by Superuser; may start immediately or at a scheduled time. Stored as Broadcast entity. |
+| opt_out_marketing | Boolean flag on Customer. When true, Customer is excluded from all Broadcast recipient lists. Toggled by Customer from own profile card. |
+| Номер клиента | Customer identifier shown on discount card (scenario 03) and entered by staff in scenario 10. Exact field TBD — see open question in scenario 03. |
+| staff_keyboard | Button set for registered Staff (sellers): «Найти профиль». |
+| superuser_keyboard | Button set for Superuser (owner): same as staff_keyboard + «Excel», «Показать продавцов», «Запустить рассылку», «Запланированные рассылки». |
