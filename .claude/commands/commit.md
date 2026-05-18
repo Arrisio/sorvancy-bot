@@ -12,11 +12,23 @@ description: Stage all modified/new files and create a commit in project style
 
 ## Your task
 
-### 1. Stage files
+### 1. Identify files to stage
 
-Run `git add -A` to stage all modified, deleted, and new files.
-Exception: never stage `.env`, `*.pem`, `*.key`, or any file that looks like credentials.
-If you spot such a file in `git status`, skip it and warn the user.
+**Do NOT run `git add -A`.**
+
+Instead:
+
+1. Look at the list of modified/new/deleted files from `git status`.
+2. Cross-reference that list against files you **actually read, edited, or created in this conversation**.
+3. Stage **only** the intersection — files you touched in this conversation.
+4. If `git status` shows files you did NOT touch in this conversation, **skip them** and warn the user:
+   > "Skipped (modified outside this conversation): <file list>"
+5. Never stage `.env`, `*.pem`, `*.key`, or any file that looks like credentials — warn the user if spotted.
+
+Stage each qualifying file explicitly:
+```bash
+git add path/to/file1 path/to/file2 ...
+```
 
 ### 2. Compose the commit message
 
