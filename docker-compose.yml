@@ -24,5 +24,20 @@ services:
       timeout: 3s
       retries: 10
 
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    restart: unless-stopped
+    env_file:
+      - .env
+      - path: .env.backup
+        required: false
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
