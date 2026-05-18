@@ -46,11 +46,11 @@ Middleware detects actor on every message — see `nfr/middleware-routing.md`. E
 **Customer** — `registered_keyboard`
 Shown to: registered Customer; Staff with `customer_mode = true`
 
-| Button | Scenario |
-|--------|----------|
-| «Мой профиль» | → 05 Profile Editing |
-| «Скидка» | → 03 Discount QR |
-| «Связаться с продавцом» | → 17 Contact Seller |
+| Row | Button | Scenario |
+|-----|--------|----------|
+| 1 | «🎁 Скидка и купоны» | → 03 Discount QR |
+| 2 | «Мой профиль» | → 05 Profile Editing |
+| 2 | «Связаться с продавцом» | → 17 Contact Seller |
 
 **Staff** (`is_owner = false`, `customer_mode = false`) — `staff_keyboard`
 

@@ -8,24 +8,30 @@ Registered user gets QR code with embedded deeplink to share with seller for pro
 - Bot
 
 ## Trigger
-User clicks "Скидка" button.
+User clicks «🎁 Скидка и купоны» button.
 
 ## Preconditions
 - Customer exists in DB
 
 ## Main flow
 
-1. Bot loads Customer from DB by `max_user_id`
+1. Bot loads Customer and active Coupons (`status = active`) from DB by `max_user_id`
 2. Bot generates QR PNG encoding Max Messenger deeplink containing customer identifier
-3. Bot sends message with QR image, customer number, discount percent, deeplink URL, and link label (+ `registered_keyboard`):
+3. Bot sends message with QR image, customer number, discount percent, coupon list, deeplink URL, and link label (+ `registered_keyboard`):
    ```
    Покажите этот QR-код продавцу
    Номер клиента: {customer.id}
    Скидка: {customer.discount_percent}%
-   
+
+   Ваши купоны:
+   🎁 {coupon.display_name}
+   🎁 {coupon.display_name}
+   …
+
    Ссылка для продавца:
    {deeplink_url}
    ```
+   Coupon section omitted if no active coupons. If >20 coupons, show first 20, append «…и ещё N» (style guide §8).
 4. User shows QR (or shares link) to seller; seller scans/opens → scenario 06 triggers
 
 ## Alternative flows
@@ -43,4 +49,4 @@ User clicks "Скидка" button.
 
 ## Open questions
 - [ ] Link label text: «Ссылка для продавца:» confirmed? Or different wording?
-- [ ] Button name/payload: user description says "Скидка"; existing code uses `DISCOUNT_BTN_TEXT`. Verify they match.
+- [ ] Code: `DISCOUNT_BTN_TEXT` constant and «Скидка» label must be updated to «🎁 Скидка и купоны» to match this spec.
