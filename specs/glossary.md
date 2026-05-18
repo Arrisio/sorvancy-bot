@@ -19,7 +19,7 @@
 | registered_keyboard_with_contact | Keyboard shown in scenario 01 step 6 immediately after registration. Same buttons as `registered_keyboard` (customer keyboard). |
 | survey_offer_keyboard | Transient keyboard shown in scenario 01 step 7: «Пропустить», «Заполнить анкету». |
 | Staff | Store personnel account in the bot — either seller or owner. Created at DB seed (owner) or via contact card forwarding (sellers). |
-| Owner | Staff member with `is_owner = true`. Single business owner with elevated permissions. Seeded at DB init. |
+| Owner | Staff member with `is_owner = true`. Elevated permissions. Multiple simultaneous owners allowed (substitute owners). Seeded owner identified by `config.OWNER_ID`; their flag cannot be revoked. |
 | Суперпользователь | Project synonym for Owner. Staff member with `is_owner = true`. |
 | Contact card | Max messenger message type carrying user identity fields (max_user_id, phone, first_name, last_name, username). Used for seller registration flow. |
 | Deeplink | Max Messenger URL embedded in customer's QR code. When followed by seller, triggers "show customer profile" command in bot. Synonymous with Ссылка in project terminology. |

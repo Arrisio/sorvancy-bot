@@ -19,8 +19,10 @@ Bot operator account for store personnel — either seller or business owner —
 
 ## Invariants
 
-- Exactly one Staff row with `is_owner = true` at all times
-- First Staff row seeded at DB init; that row has `is_owner = true`
+- At least one Staff row with `is_owner = true` exists at all times (seeded owner)
+- Multiple Staff rows may have `is_owner = true` simultaneously (substitute owners allowed)
+- Staff row with `max_user_id = config.OWNER_ID` always has `is_owner = true`; flag cannot be revoked by any actor
+- First Staff row seeded at DB init from `config.OWNER_ID` (env var); that row has `is_owner = true`
 - `max_user_id` unique — one Staff account per Max user
 - `customer_mode` toggled only by superuser via `/mode` command (scenario 14); not settable by sellers themselves
 - `customer_mode = true` affects routing only; Staff permissions (`is_owner`) remain unchanged
@@ -31,7 +33,7 @@ Bot operator account for store personnel — either seller or business owner —
 
 ## Open questions
 
-- [ ] Seed data: how is first owner's `max_user_id` supplied? (env var, migration parameter, manual SQL?)
-- [ ] Can `is_owner` be transferred to another Staff member, or is it permanently fixed at seed time?
+- [x] Seed data: first owner's `max_user_id` supplied via `config.OWNER_ID` env var; `init_db.py` creates Staff row on first run.
+- [x] Can `is_owner` be transferred? Yes — Owner assigns/revokes `is_owner` for any Staff via scenario 09; OWNER_ID row protected.
 - [ ] What specific bot functions are restricted to `is_owner` vs available to all Staff? (Needed to define authorization model)
 - [ ] Phone: stored as received from contact card, or normalized to a standard format?
