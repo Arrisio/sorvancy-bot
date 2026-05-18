@@ -112,10 +112,9 @@ async def register_staff_handlers(dp):
         for member in members:
             name = " ".join(filter(None, [member.first_name, member.last_name])) or "—"
             role_label = "Владелец" if member.is_owner else "Продавец"
-            phone_part = f"\n📞 {member.phone}" if member.phone else ""
             is_protected = config.OWNER_ID is not None and member.max_user_id == config.OWNER_ID
             await event.message.answer(
-                f"👤 {name} ({role_label}){phone_part}",
+                f"👤 {name} ({role_label})",
                 attachments=[staff_management_keyboard(member.id, member.is_owner, is_protected)],
             )
 
