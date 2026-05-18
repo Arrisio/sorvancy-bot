@@ -51,6 +51,19 @@ async def delete(session: AsyncSession, staff_id: int) -> None:
         await session.delete(staff)
 
 
+async def get_all_staff_except(session: AsyncSession, max_user_id: int) -> list[Staff]:
+    result = await session.execute(
+        select(Staff).where(Staff.max_user_id != max_user_id).order_by(Staff.created_at)
+    )
+    return list(result.scalars())
+
+
+async def set_is_owner(session: AsyncSession, staff_id: int, value: bool) -> None:
+    await session.execute(
+        update(Staff).where(Staff.id == staff_id).values(is_owner=value)
+    )
+
+
 async def set_customer_mode(
     session: AsyncSession, max_user_id: int, value: bool
 ) -> Optional[Staff]:

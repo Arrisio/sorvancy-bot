@@ -258,6 +258,40 @@ def confirm_delete_seller_keyboard(staff_id: int):
     return builder.as_markup()
 
 
+def staff_management_keyboard(staff_id: int, is_owner: bool, is_protected: bool):
+    builder = InlineKeyboardBuilder()
+    if is_owner and not is_protected:
+        builder.row(
+            CallbackButton(text="Снять флаг владельца", payload=f"seller:revoke_owner:{staff_id}"),
+        )
+    elif not is_owner:
+        builder.row(
+            CallbackButton(text="Назначить владельцем", payload=f"seller:assign_owner:{staff_id}"),
+        )
+    builder.row(
+        CallbackButton(text="Удалить", payload=f"seller:delete:{staff_id}"),
+    )
+    return builder.as_markup()
+
+
+def confirm_assign_owner_keyboard(staff_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="Назначить", payload=f"seller:confirm_assign_owner:{staff_id}"),
+        CallbackButton(text="Отмена", payload="seller:cancel_assign_owner"),
+    )
+    return builder.as_markup()
+
+
+def confirm_revoke_owner_keyboard(staff_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="Снять", payload=f"seller:confirm_revoke_owner:{staff_id}"),
+        CallbackButton(text="Отмена", payload="seller:cancel_revoke_owner"),
+    )
+    return builder.as_markup()
+
+
 def empty_profile_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(CallbackButton(text="Заполнить анкету", payload="survey:start"))

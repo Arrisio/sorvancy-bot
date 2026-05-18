@@ -4,13 +4,14 @@ Text and callback handling is in text_router.py and callback_router.py.
 """
 import re
 import logging
+import config
 from maxapi.types import MessageCreated
 from maxapi.filters import F
 from maxapi.context import MemoryContext
 
 from src.states import StaffState, RegistrationState
 from src.keyboards import (
-    delete_seller_keyboard,
+    staff_management_keyboard,
     cancel_keyboard,
     STAFF_FIND_BTN_TEXT,
     STAFF_LIST_BTN_TEXT,
@@ -93,7 +94,7 @@ async def register_staff_handlers(dp):
             f"Ссылка действует сегодня и завтра.\n\n{link}"
         )
 
-    # Scenario 09: list all sellers
+    # Scenario 09: list all staff (except acting user)
     @dp.message_created(F.message.body.text == STAFF_LIST_BTN_TEXT)
     async def on_staff_list(
         event: MessageCreated,
@@ -104,15 +105,18 @@ async def register_staff_handlers(dp):
         if route != "staff" or staff is None or not staff.is_owner:
             return
         async with get_session_factory()() as session:
-            sellers = await staff_model.get_all_sellers(session)
-        if not sellers:
+            members = await staff_model.get_all_staff_except(session, staff.max_user_id)
+        if not members:
             await event.message.answer("Продавцов не зарегистрировано.")
             return
-        for seller in sellers:
-            name = " ".join(filter(None, [seller.first_name, seller.last_name])) or "—"
+        for member in members:
+            name = " ".join(filter(None, [member.first_name, member.last_name])) or "—"
+            role_label = "Владелец" if member.is_owner else "Продавец"
+            phone_part = f"\n📞 {member.phone}" if member.phone else ""
+            is_protected = config.OWNER_ID is not None and member.max_user_id == config.OWNER_ID
             await event.message.answer(
-                f"👤 {name}",
-                attachments=[delete_seller_keyboard(seller.id)],
+                f"👤 {name} ({role_label}){phone_part}",
+                attachments=[staff_management_keyboard(member.id, member.is_owner, is_protected)],
             )
 
     # Scenario 10: trigger awaiting customer ID state

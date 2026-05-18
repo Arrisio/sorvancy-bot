@@ -1,5 +1,6 @@
 import logging
 
+import config
 from maxapi.context import MemoryContext
 
 from src.states import StaffState, RegistrationState
@@ -8,6 +9,8 @@ from src.keyboards import (
     staff_keyboard,
     cancel_keyboard,
     confirm_delete_seller_keyboard,
+    confirm_assign_owner_keyboard,
+    confirm_revoke_owner_keyboard,
     confirm_coupon_keyboard,
     broadcast_cancel_confirm_keyboard,
 )
@@ -59,6 +62,92 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
 
     if payload == "seller:cancel_delete":
         await bot.send_message(user_id=user_id, text="Удаление отменено.")
+        return
+
+    if payload.startswith("seller:assign_owner:") and staff.is_owner:
+        staff_id = int(payload.split(":")[-1])
+        async with get_session_factory()() as session:
+            seller = await staff_model.get_by_id(session, staff_id)
+        if seller is None:
+            await bot.send_message(user_id=user_id, text="Продавец не найден.")
+            return
+        name = _display_name(seller.first_name, seller.last_name) or str(staff_id)
+        await bot.send_message(
+            user_id=user_id,
+            text=f"Назначить {name} владельцем?",
+            attachments=[confirm_assign_owner_keyboard(staff_id)],
+        )
+        return
+
+    if payload.startswith("seller:confirm_assign_owner:") and staff.is_owner:
+        staff_id = int(payload.split(":")[-1])
+        async with get_session_factory()() as session:
+            seller = await staff_model.get_by_id(session, staff_id)
+        if seller is None:
+            await bot.send_message(user_id=user_id, text="Продавец не найден.")
+            return
+        name = _display_name(seller.first_name, seller.last_name) or str(staff_id)
+        async with get_session_factory()() as session:
+            async with session.begin():
+                await staff_model.set_is_owner(session, staff_id, True)
+        await bot.send_message(
+            user_id=user_id,
+            text=f"{name} назначен владельцем.",
+            attachments=[superuser_keyboard()],
+        )
+        return
+
+    if payload == "seller:cancel_assign_owner":
+        await bot.send_message(user_id=user_id, text="Отменено.")
+        return
+
+    if payload.startswith("seller:revoke_owner:") and staff.is_owner:
+        staff_id = int(payload.split(":")[-1])
+        async with get_session_factory()() as session:
+            seller = await staff_model.get_by_id(session, staff_id)
+        if seller is None:
+            await bot.send_message(user_id=user_id, text="Продавец не найден.")
+            return
+        if config.OWNER_ID is not None and seller.max_user_id == config.OWNER_ID:
+            await bot.send_message(
+                user_id=user_id,
+                text="Нельзя снять флаг владельца у основного владельца.",
+            )
+            return
+        name = _display_name(seller.first_name, seller.last_name) or str(staff_id)
+        await bot.send_message(
+            user_id=user_id,
+            text=f"Снять права владельца у {name}?",
+            attachments=[confirm_revoke_owner_keyboard(staff_id)],
+        )
+        return
+
+    if payload.startswith("seller:confirm_revoke_owner:") and staff.is_owner:
+        staff_id = int(payload.split(":")[-1])
+        async with get_session_factory()() as session:
+            seller = await staff_model.get_by_id(session, staff_id)
+        if seller is None:
+            await bot.send_message(user_id=user_id, text="Продавец не найден.")
+            return
+        if config.OWNER_ID is not None and seller.max_user_id == config.OWNER_ID:
+            await bot.send_message(
+                user_id=user_id,
+                text="Нельзя снять флаг владельца у основного владельца.",
+            )
+            return
+        name = _display_name(seller.first_name, seller.last_name) or str(staff_id)
+        async with get_session_factory()() as session:
+            async with session.begin():
+                await staff_model.set_is_owner(session, staff_id, False)
+        await bot.send_message(
+            user_id=user_id,
+            text=f"Права владельца сняты у {name}.",
+            attachments=[superuser_keyboard()],
+        )
+        return
+
+    if payload == "seller:cancel_revoke_owner":
+        await bot.send_message(user_id=user_id, text="Отменено.")
         return
 
     if payload == "find_customer:cancel":
