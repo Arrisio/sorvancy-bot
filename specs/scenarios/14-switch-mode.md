@@ -32,4 +32,4 @@ Superuser sends `/mode` command.
 - `/mode` toggles only the sending superuser's own flag; cannot target other Staff members
 
 ## Open questions
-- (none)
+- [ ] Superuser in `customer_mode = true` triggers `bot_started`: show `registered_keyboard` or no automatic keyboard?

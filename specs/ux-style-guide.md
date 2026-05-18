@@ -39,19 +39,53 @@ Rules for consistent user experience across all scenarios. Read before writing s
 
 ## 2. Keyboards
 
-**Rule:** every terminal action of a scenario restores the actor-appropriate keyboard.
+### 2.1 Persistent keyboards by actor role
 
-| Actor | Keyboard |
-|---|---|
-| Customer | `registered_keyboard` |
-| Staff | `registered_keyboard` (staff mode) |
-| Superuser | `superuser_keyboard` |
+Middleware detects actor on every message — see `nfr/middleware-routing.md`. Every terminal action of a scenario restores the actor-appropriate keyboard.
 
-**[Отмена] button:**
+**Customer** — `registered_keyboard`
+Shown to: registered Customer; Staff with `customer_mode = true`
+
+| Button | Scenario |
+|--------|----------|
+| «Мой профиль» | → 05 Profile Editing |
+| «Скидка» | → 03 Discount QR |
+| «Связаться с продавцом» | → 17 Contact Seller |
+
+**Staff** (`is_owner = false`, `customer_mode = false`) — `staff_keyboard`
+
+| Button | Scenario |
+|--------|----------|
+| «Найти профиль» | → 10 Find Customer Profile by ID |
+
+Note: Staff triggers scenario 06 (Show Customer Profile) via deeplink — no keyboard button needed.
+
+**Superuser** (`is_owner = true`, `customer_mode = false`) — `superuser_keyboard`
+
+| Button | Scenario |
+|--------|----------|
+| «Найти профиль» | → 10 Find Customer Profile by ID |
+| «Excel» | → 13 Excel Export |
+| «Показать продавцов» | → 09 Staff List Management |
+| «Запустить рассылку» | → 11 Create and Schedule Broadcast |
+| «Запланированные рассылки» | → 12 Show Scheduled Broadcasts |
+
+Note: Superuser registers sellers via contact card forwarding — no keyboard button; out-of-band onboarding by design.
+
+`/mode` command available to Superuser at any time regardless of `customer_mode` — see scenario 14.
+
+### 2.2 Transient keyboards
+
+Mid-flow keyboards shown during specific scenarios. Defined in their owning scenario spec. Named in `specs/glossary.md` for cross-reference only.
+
+### 2.3 [Отмена] button
+
 - Required on any FSM prompt awaiting free-text input
 - Not required on button-choice steps (user is not blocked — they just choose a button)
 
-**Destructive action rule:** destructive actions (delete, reset) require an explicit confirm button. Never trigger destructive action from free-text input alone.
+### 2.4 Destructive actions
+
+Destructive actions (delete, reset) require explicit confirm button. Never trigger destructive action from free-text input alone.
 
 ---
 

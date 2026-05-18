@@ -53,5 +53,8 @@ New Max user gets registered and receives discount in one button click, no form 
 - survey_offer_mid stored in MemoryContext
 - User sees discount percent and survey offer
 
+## Open questions
+- [ ] Staff `bot_started`: is `staff_keyboard` shown automatically on bot start for known Staff, or only after explicit action?
+
 ## NFR refs
 - pii.md: max_username storage

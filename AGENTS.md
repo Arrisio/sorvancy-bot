@@ -24,6 +24,10 @@ specs/
 
 Read `specs/ux-style-guide.md` before writing scenario specs or implementing handlers. It defines when to send / edit / delete messages, keyboard restore rules, FSM multi-step patterns, validation UX, and button idempotency.
 
+Read `specs/glossary.md` when writing specs, naming actors/entities, or when term precision matters. It is the canonical source for actor definitions and keyboard names.
+
+When editing scenario specs: if new terms appear → add to `specs/glossary.md`; if keyboard behavior changes → update `specs/ux-style-guide.md` §2.1.
+
 To generate or update specs from a natural language description, use `/spec-analyst`.
 
 ## Критическое требование: Max Bot API

@@ -14,7 +14,7 @@
 | Phase 2 | Survey: enriches Customer with first_name, birthdate; creates Child rows. |
 | Cashier | Store staff who reads discount QR or text card from customer's phone screen. |
 | Coupon | Single-use monetary benefit issued to a Customer. Covers part of purchase up to `value` rubles and `max_payment_pct`% of total. Expires at `valid_until`. |
-| registered_keyboard | Persistent keyboard for registered Customer: «Мой профиль», «Скидка», «Связаться с продавцом». See keyboards.md. |
+| registered_keyboard | Persistent keyboard for registered Customer. Button routing: `specs/ux-style-guide.md` §2.1. |
 | unregistered_keyboard | Button set for new users: «Зарегистрироваться и получить скидку». |
 | registered_keyboard_with_contact | Keyboard shown in scenario 01 step 6 immediately after registration. Same buttons as `registered_keyboard` (customer keyboard). |
 | survey_offer_keyboard | Transient keyboard shown in scenario 01 step 7: «Пропустить», «Заполнить анкету». |
@@ -28,5 +28,5 @@
 | Broadcast / Рассылка | Mass message forwarded to a filtered set of customers. Created by Superuser; may start immediately or at a scheduled time. Stored as Broadcast entity. |
 | opt_out_marketing | Boolean flag on Customer. When true, Customer is excluded from all Broadcast recipient lists. Toggled by Customer from own profile card. |
 | Номер клиента | Customer identifier shown on discount card (scenario 03) and entered by staff in scenario 10. Exact field TBD — see open question in scenario 03. |
-| staff_keyboard | Button set for registered Staff (sellers): «Найти профиль». |
-| superuser_keyboard | Button set for Superuser (owner): same as staff_keyboard + «Excel», «Показать продавцов», «Запустить рассылку», «Запланированные рассылки». |
+| staff_keyboard | Persistent keyboard for Staff (`is_owner = false`, `customer_mode = false`). Button routing: `specs/ux-style-guide.md` §2.1. |
+| superuser_keyboard | Persistent keyboard for Superuser (`is_owner = true`, `customer_mode = false`). Button routing: `specs/ux-style-guide.md` §2.1. |

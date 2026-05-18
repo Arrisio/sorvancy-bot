@@ -12,7 +12,10 @@ Specs: `specs/` directory. Code: `src/`.
 2. **Verify against code** — If describing existing behavior, read the relevant `src/` file to confirm. Flag any spec↔code divergence as open question.
 3. **Clarify once** — If user description is ambiguous on one key point, ask one question. Never ask multiple.
 4. **Write** — Create or update the spec file. Follow templates below exactly.
-5. **Report** — State: what file was written, what changed, what open questions remain.
+5. **Sync references** — After writing, check:
+   - Any new domain terms or actor conditions → append rows to `specs/glossary.md`
+   - Any keyboard introduced or changed → verify it is defined in `specs/ux-style-guide.md` §2.1; update §2.1 if needed
+6. **Report** — State: what file was written, what changed, what open questions remain.
 
 ## File placement
 

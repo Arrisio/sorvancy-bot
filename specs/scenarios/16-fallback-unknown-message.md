@@ -18,7 +18,7 @@ Text message arrives and no handler in the routing chain matches (falls through 
 1. Bot sends fallback message:
    «Извините, я глупый бот и вас не понял, но вы можете явно выбрать одно из следующих действий.»
 
-2. Bot resends actor-appropriate persistent keyboard (per `specs/keyboards.md`):
+2. Bot resends actor-appropriate persistent keyboard (per `specs/ux-style-guide.md` §2.1):
 
    | route | keyboard |
    |-------|----------|
