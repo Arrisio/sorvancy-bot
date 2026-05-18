@@ -233,11 +233,11 @@ async def _resend_survey_step(bot, user_id: int, state: str, context: MemoryCont
     elif state == RegistrationState.AWAITING_LAST_NAME:
         await _send_step(bot, user_id, context,
             "Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. Можно пропустить 😊",
-            back_and_skip_keyboard())
+            back_and_skip_keyboard("survey:cancel"))
     elif state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
         await _send_step(bot, user_id, context,
             "Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
-            back_and_skip_keyboard())
+            back_and_skip_keyboard("survey:cancel"))
     elif state == RegistrationState.AWAITING_CHILD_NAME:
         if not children:
             await _send_step(bot, user_id, context,
@@ -254,7 +254,7 @@ async def _resend_survey_step(bot, user_id: int, state: str, context: MemoryCont
     elif state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
         await _send_step(bot, user_id, context,
             f"Ребёнок {n} · шаг 2 из 3 · Когда день рождения у ребёнка? Будем поздравлять! 🎉 (ДД.ММ.ГГГГ)",
-            back_and_skip_keyboard())
+            back_and_skip_keyboard("survey:cancel"))
     elif state == RegistrationState.AWAITING_MORE_CHILDREN:
         await _send_step(bot, user_id, context,
             f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",

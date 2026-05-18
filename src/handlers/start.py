@@ -82,6 +82,7 @@ async def register_start_handlers(dp):
                 await event.bot.send_message(
                     user_id=user_id,
                     text="Вы зарегистрированы как продавец магазина «Сорванцы».",
+                    attachments=[staff_keyboard()],
                 )
                 try:
                     await event.bot.send_message(

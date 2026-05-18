@@ -9,6 +9,7 @@ from src.keyboards import (
     cancel_keyboard,
     confirm_delete_seller_keyboard,
     confirm_coupon_keyboard,
+    broadcast_cancel_confirm_keyboard,
 )
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
@@ -149,12 +150,20 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
     if payload == "coupon:issue_cancel":
         data = await context.get_data()
         coupon_ctx = data.get("coupon_context", "seller")
-        await context.set_state(RegistrationState.REGISTERED)
         if coupon_ctx == "broadcast":
+            if state in (StaffState.AWAITING_COUPON_DAYS, StaffState.AWAITING_COUPON_PCT):
+                await bot.send_message(
+                    user_id=user_id,
+                    text="Данные не сохранятся. Отменить рассылку?",
+                    attachments=[broadcast_cancel_confirm_keyboard()],
+                )
+                return
+            await context.set_state(RegistrationState.REGISTERED)
             await context.update_data(coupon_context=None)
             await _delete_step_mids(bot, context)
             await bot.send_message(user_id=user_id, text="Рассылка отменена.", attachments=[superuser_keyboard()])
         else:
+            await context.set_state(RegistrationState.REGISTERED)
             customer_id = data.get("coupon_target_customer_id")
             if state in (StaffState.AWAITING_COUPON_DAYS, StaffState.AWAITING_COUPON_PCT) and customer_id:
                 await bot.send_message(user_id=user_id, text="Выдача отменена.")
@@ -186,12 +195,37 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         return
 
     if payload == "broadcast:cancel_create":
+        if state in (
+            StaffState.AWAITING_COUPON_DAYS,
+            StaffState.AWAITING_COUPON_PCT,
+            StaffState.AWAITING_BROADCAST_RECIPIENTS,
+            StaffState.AWAITING_BROADCAST_TIME,
+        ):
+            await bot.send_message(
+                user_id=user_id,
+                text="Данные не сохранятся. Отменить рассылку?",
+                attachments=[broadcast_cancel_confirm_keyboard()],
+            )
+            return
         await context.set_state(RegistrationState.REGISTERED)
         await _delete_step_mids(bot, context)
         await bot.send_message(
             user_id=user_id, text="Рассылка отменена.",
             attachments=[superuser_keyboard()],
         )
+        return
+
+    if payload == "broadcast:confirm_cancel":
+        await context.set_state(RegistrationState.REGISTERED)
+        await context.update_data(coupon_context=None)
+        await _delete_step_mids(bot, context)
+        await bot.send_message(
+            user_id=user_id, text="Рассылка отменена.",
+            attachments=[superuser_keyboard()],
+        )
+        return
+
+    if payload == "broadcast:continue":
         return
 
     if payload == "broadcast:soonest":
@@ -207,6 +241,13 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
             StaffState.AWAITING_BROADCAST_RECIPIENTS,
             StaffState.AWAITING_BROADCAST_MSG,
         ):
+            return
+        if state in (StaffState.AWAITING_BROADCAST_TIME, StaffState.AWAITING_BROADCAST_RECIPIENTS):
+            await bot.send_message(
+                user_id=user_id,
+                text="Данные не сохранятся. Отменить рассылку?",
+                attachments=[broadcast_cancel_confirm_keyboard()],
+            )
             return
         await _delete_step_mids(bot, context)
         await context.set_state(RegistrationState.REGISTERED)

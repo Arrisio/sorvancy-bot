@@ -84,7 +84,7 @@ async def register_broadcast_handlers(dp):
         await context.set_state(StaffState.AWAITING_BROADCAST_MSG)
         await context.update_data(step_mids=[])
         sent = await event.message.answer(
-            "Пришлите сообщение для рассылки",
+            "Шаг 1 из 4 · Пришлите сообщение для рассылки",
             attachments=[cancel_keyboard("broadcast:cancel_create")],
         )
         await _append_step_mid(context, sent.message.body.mid)
@@ -122,7 +122,7 @@ async def _save_broadcast_source(event, context) -> None:
     await context.set_state(StaffState.AWAITING_BROADCAST_COUPON_CHOICE)
     sent = await event.bot.send_message(
         user_id=user_id,
-        text="Добавить купон к рассылке?",
+        text="Шаг 2 из 4 · Добавить купон к рассылке?",
         attachments=[broadcast_coupon_choice_keyboard()],
     )
     await _append_step_mid(context, sent.message.body.mid)
@@ -132,7 +132,7 @@ async def _ask_broadcast_recipients(bot, user_id: int, context) -> None:
     await context.set_state(StaffState.AWAITING_BROADCAST_RECIPIENTS)
     sent = await bot.send_message(
         user_id=user_id,
-        text="Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
+        text="Шаг 3 из 4 · Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
         attachments=[cancel_keyboard("broadcast:cancel_create")],
     )
     await _append_step_mid(context, sent.message.body.mid)

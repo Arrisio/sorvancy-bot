@@ -17,6 +17,7 @@ from src.keyboards import (
     adding_child_back_keyboard,
 )
 from src.handlers.profile import _profile_text, _child_text
+from src.handlers.callbacks._common import _delete_step_mids, _append_step_mid
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import child as child_model
@@ -232,17 +233,20 @@ async def handle_profile_callback(
 
     if payload == "child:add":
         await context.set_state(ProfileState.ADDING_CHILD_NAME)
-        await bot.send_message(
+        await context.update_data(step_mids=[])
+        sent = await bot.send_message(
             user_id=user_id,
             text="Как зовут ребёнка?",
             attachments=[adding_child_back_keyboard()],
         )
+        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if payload == "child:add_cancel":
         cust = await get_customer()
         if cust is None:
             return
+        await _delete_step_mids(bot, context)
         await context.set_state(RegistrationState.REGISTERED)
         async with get_session_factory()() as session:
             children = await child_model.get_by_customer(session, cust.id)
@@ -253,11 +257,12 @@ async def handle_profile_callback(
         gender = payload.split(":")[-1]
         await context.update_data(**{"new_child.gender": gender})
         await context.set_state(ProfileState.ADDING_CHILD_BIRTHDATE)
-        await bot.send_message(
+        sent = await bot.send_message(
             user_id=user_id,
             text="Когда день рождения у ребёнка? (ДД.ММ.ГГГГ)",
-            attachments=[back_and_skip_keyboard()],
+            attachments=[back_and_skip_keyboard("child:add_cancel")],
         )
+        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == ProfileState.ADDING_CHILD_BIRTHDATE and payload == "skip":
@@ -280,6 +285,7 @@ async def handle_profile_callback(
             logger.exception("Add child (no birthdate) failed")
             await bot.send_message(user_id=user_id, text="Ошибка. Попробуйте ещё раз.")
             return
+        await _delete_step_mids(bot, context)
         await context.set_state(RegistrationState.REGISTERED)
         await bot.send_message(
             user_id=user_id,
@@ -291,18 +297,20 @@ async def handle_profile_callback(
     if state in (ProfileState.ADDING_CHILD_GENDER, ProfileState.ADDING_CHILD_BIRTHDATE) and payload == "back":
         if state == ProfileState.ADDING_CHILD_BIRTHDATE:
             await context.set_state(ProfileState.ADDING_CHILD_GENDER)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Ваш ребёнок — мальчик или девочка?",
                 attachments=[gender_keyboard()],
             )
+            await _append_step_mid(context, sent.message.body.mid)
         else:
             await context.set_state(ProfileState.ADDING_CHILD_NAME)
-            await bot.send_message(
+            sent = await bot.send_message(
                 user_id=user_id,
                 text="Как зовут ребёнка?",
                 attachments=[adding_child_back_keyboard()],
             )
+            await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == ProfileState.EDITING_CHILD_FIELD and payload.startswith("gender:"):

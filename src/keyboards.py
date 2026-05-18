@@ -84,12 +84,14 @@ def back_keyboard():
     return builder.as_markup()
 
 
-def back_and_skip_keyboard():
+def back_and_skip_keyboard(cancel_payload: str = None):
     builder = InlineKeyboardBuilder()
     builder.row(
         CallbackButton(text="Пропустить", payload="skip"),
         CallbackButton(text="← Назад", payload="back"),
     )
+    if cancel_payload:
+        builder.row(CallbackButton(text="Отмена", payload=cancel_payload))
     return builder.as_markup()
 
 
@@ -288,5 +290,14 @@ def cancel_broadcast_keyboard(broadcast_id: int):
     builder = InlineKeyboardBuilder()
     builder.row(
         CallbackButton(text="Отменить", payload=f"broadcast:cancel:{broadcast_id}")
+    )
+    return builder.as_markup()
+
+
+def broadcast_cancel_confirm_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="Да, отменить", payload="broadcast:confirm_cancel"),
+        CallbackButton(text="Продолжить", payload="broadcast:continue"),
     )
     return builder.as_markup()

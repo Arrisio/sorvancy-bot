@@ -51,7 +51,7 @@ async def register_excel_handlers(dp):
         )
         await event.bot.send_message(
             user_id=user_id,
-            text="Готово.",
+            text=f"Выгрузка за {now_str} готова.",
             attachments=[superuser_keyboard()],
         )
 
