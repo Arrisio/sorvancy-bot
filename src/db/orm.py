@@ -92,6 +92,7 @@ class Coupon(Base):
         BigInteger, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False
     )
     type: Mapped[str] = mapped_column(Text, nullable=False)
+    display_name: Mapped[str] = mapped_column(Text, nullable=False)
     value: Mapped[int] = mapped_column(Integer, nullable=False)
     max_payment_pct: Mapped[int] = mapped_column(Integer, nullable=False)
     valid_until: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
@@ -154,6 +155,7 @@ class Broadcast(Base):
     coupon_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coupon_validity_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coupon_max_payment_pct: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    coupon_display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     creator: Mapped["Staff"] = relationship(back_populates="broadcasts")
     recipients: Mapped[list["BroadcastRecipient"]] = relationship(back_populates="broadcast")

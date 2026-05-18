@@ -86,6 +86,7 @@ async def _deliver_broadcast(bot, broadcast) -> None:
                             value=broadcast.coupon_value,
                             validity_days=broadcast.coupon_validity_days,
                             max_payment_pct=broadcast.coupon_max_payment_pct,
+                            display_name=broadcast.coupon_display_name or f"{broadcast.coupon_value} ₽",
                         )
                 await bot.send_message(
                     user_id=max_user_id,

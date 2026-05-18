@@ -30,12 +30,15 @@ async def create_survey_coupon(
     valid_days: int,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
+    valid_until = now + timedelta(days=valid_days)
+    display_name = f"Бонус {value} ₽ до {valid_until.strftime('%d.%m.%y')}"
     coupon = Coupon(
         customer_id=customer_id,
         type="anket",
+        display_name=display_name,
         value=value,
         max_payment_pct=max_pct,
-        valid_until=now + timedelta(days=valid_days),
+        valid_until=valid_until,
         status="active",
     )
     session.add(coupon)
@@ -50,11 +53,13 @@ async def create_seller_coupon(
     value: int,
     validity_days: int,
     max_payment_pct: int,
+    display_name: str,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
     coupon = Coupon(
         customer_id=customer_id,
         type="seller",
+        display_name=display_name,
         value=value,
         max_payment_pct=max_payment_pct,
         valid_until=now + timedelta(days=validity_days),
@@ -74,12 +79,15 @@ async def create_birthday_coupon(
     max_payment_pct: int = 100,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
+    valid_until = now + timedelta(days=valid_days)
+    display_name = f"ДР: {value} ₽ до {valid_until.strftime('%d.%m.%y')}"
     coupon = Coupon(
         customer_id=customer_id,
         type="birthday",
+        display_name=display_name,
         value=value,
         max_payment_pct=max_payment_pct,
-        valid_until=now + timedelta(days=valid_days),
+        valid_until=valid_until,
         status="active",
     )
     session.add(coupon)
@@ -94,11 +102,13 @@ async def create_broadcast_coupon(
     value: int,
     validity_days: int,
     max_payment_pct: int,
+    display_name: str,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
     coupon = Coupon(
         customer_id=customer_id,
         type="broadcast",
+        display_name=display_name,
         value=value,
         max_payment_pct=max_payment_pct,
         valid_until=now + timedelta(days=validity_days),

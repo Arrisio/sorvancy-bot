@@ -199,12 +199,21 @@ def adding_child_back_keyboard():
     return builder.as_markup()
 
 
+def coupon_display_name_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="Принять", payload="coupon:accept_display_name"),
+        CallbackButton(text="Отмена", payload="coupon:issue_cancel"),
+    )
+    return builder.as_markup()
+
+
 def staff_profile_keyboard(customer_id: int, coupons):
     builder = InlineKeyboardBuilder()
     for c in coupons:
         builder.row(
             CallbackButton(
-                text=f"Купон «{c.type}» — {c.value} ₽",
+                text=c.display_name,
                 payload=f"coupon:redeem:{c.id}",
             )
         )

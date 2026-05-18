@@ -146,6 +146,7 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
     coupon_value = data.get("broadcast_coupon_value")
     coupon_days = data.get("broadcast_coupon_days")
     coupon_pct = data.get("broadcast_coupon_pct")
+    coupon_display_name = data.get("broadcast_coupon_display_name")
 
     if not mid or not recipient_ids:
         await bot.send_message(user_id=user_id, text="Ошибка: нет данных для рассылки.")
@@ -167,6 +168,7 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
                     coupon_value=coupon_value,
                     coupon_validity_days=coupon_days,
                     coupon_max_payment_pct=coupon_pct,
+                    coupon_display_name=coupon_display_name,
                 )
                 await broadcast_model.create_recipients(session, b.id, recipient_ids)
     except Exception:

@@ -4,7 +4,7 @@ Routes to sub-handlers based on `route` (from middleware) and FSM state.
 This avoids multiple handlers competing for the same event type.
 """
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from maxapi.types import MessageCreated
 from maxapi.filters import F
@@ -36,6 +36,7 @@ from src.keyboards import (
     cancel_keyboard,
     broadcast_start_keyboard,
     child_card_keyboard,
+    coupon_display_name_keyboard,
 )
 import config
 from src.handlers.registration import _format_confirmation, _parse_date, _parse_int_list
@@ -50,6 +51,51 @@ from src.handlers.financial_settings import (
 from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
+
+
+async def _apply_coupon_display_name(bot, user_id: int, context, display_name: str) -> None:
+    data = await context.get_data()
+    coupon_ctx = data.get("coupon_context", "seller")
+    pct = data.get("coupon_draft_pct")
+
+    if coupon_ctx == "broadcast":
+        await context.update_data(
+            broadcast_coupon_value=data.get("coupon_draft_value"),
+            broadcast_coupon_days=data.get("coupon_draft_days"),
+            broadcast_coupon_pct=pct,
+            broadcast_coupon_display_name=display_name,
+            coupon_context=None,
+        )
+        await _ask_broadcast_recipients(bot, user_id, context)
+        return
+
+    customer_id = data.get("coupon_target_customer_id")
+    value = data.get("coupon_draft_value")
+    days = data.get("coupon_draft_days")
+    issued_coupon = None
+    cust = None
+    try:
+        async with get_session_factory()() as session:
+            async with session.begin():
+                issued_coupon = await coupon_model.create_seller_coupon(
+                    session, customer_id, value, days, pct, display_name
+                )
+                cust = await customer_model.get_by_id(session, customer_id)
+    except Exception:
+        logger.exception("Seller coupon creation failed for customer_id=%s", customer_id)
+        await bot.send_message(user_id=user_id, text="Ошибка. Попробуйте ещё раз.")
+        return
+    await context.set_state(RegistrationState.REGISTERED)
+    await bot.send_message(user_id=user_id, text="Купон выдан.")
+    if cust:
+        try:
+            await bot.send_message(
+                user_id=cust.max_user_id,
+                text=coupon_issued_notification(issued_coupon),
+            )
+        except Exception:
+            logger.warning("Could not notify customer %s of coupon issuance", cust.max_user_id)
+    await _send_customer_profile_by_id(bot, user_id, customer_id)
 
 
 async def register_text_router(dp):
@@ -298,44 +344,39 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             return
         data = await context.get_data()
         coupon_ctx = data.get("coupon_context", "seller")
-
-        if coupon_ctx == "broadcast":
-            await context.update_data(
-                broadcast_coupon_value=data.get("coupon_draft_value"),
-                broadcast_coupon_days=data.get("coupon_draft_days"),
-                broadcast_coupon_pct=pct,
-                coupon_context=None,
-            )
-            await _ask_broadcast_recipients(bot, user_id, context)
-            return
-
-        customer_id = data.get("coupon_target_customer_id")
         value = data.get("coupon_draft_value")
         days = data.get("coupon_draft_days")
-        survey_coupon = None
-        cust = None
-        try:
-            async with get_session_factory()() as session:
-                async with session.begin():
-                    survey_coupon = await coupon_model.create_seller_coupon(
-                        session, customer_id, value, days, pct
-                    )
-                    cust = await customer_model.get_by_id(session, customer_id)
-        except Exception:
-            logger.exception("Seller coupon creation failed for customer_id=%s", customer_id)
-            await bot.send_message(user_id=user_id, text="Ошибка. Попробуйте ещё раз.")
+        await context.update_data(coupon_draft_pct=pct)
+        expiry = datetime.now(timezone.utc) + timedelta(days=days)
+        suggested = f"{value} ₽ до {expiry.strftime('%d.%m.%y')}"
+        await context.update_data(coupon_draft_suggested_display_name=suggested)
+        await context.set_state(StaffState.AWAITING_COUPON_DISPLAY_NAME)
+        sent = await bot.send_message(
+            user_id=user_id,
+            text=(
+                f"Название купона в кнопке (видит покупатель, макс. 40 символов).\n"
+                f"Предложение: «{suggested}».\n"
+                "Введите своё или нажмите «Принять»."
+            ),
+            attachments=[coupon_display_name_keyboard()],
+        )
+        if coupon_ctx == "broadcast":
+            await _append_step_mid(context, sent.message.body.mid)
+        return
+
+    if state == StaffState.AWAITING_COUPON_DISPLAY_NAME:
+        if len(text) > 40:
+            data = await context.get_data()
+            coupon_ctx = data.get("coupon_context", "seller")
+            sent = await bot.send_message(
+                user_id=user_id,
+                text="Название не должно превышать 40 символов. Введите короче или нажмите «Принять».",
+                attachments=[coupon_display_name_keyboard()],
+            )
+            if coupon_ctx == "broadcast":
+                await _append_step_mid(context, sent.message.body.mid)
             return
-        await context.set_state(RegistrationState.REGISTERED)
-        await bot.send_message(user_id=user_id, text="Купон выдан.")
-        if cust:
-            try:
-                await bot.send_message(
-                    user_id=cust.max_user_id,
-                    text=coupon_issued_notification(survey_coupon),
-                )
-            except Exception:
-                logger.warning("Could not notify customer %s of coupon issuance", cust.max_user_id)
-        await _send_customer_profile_by_id(bot, user_id, customer_id)
+        await _apply_coupon_display_name(bot, user_id, context, text)
         return
 
     # Customer ID lookup

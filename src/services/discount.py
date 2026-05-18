@@ -55,7 +55,7 @@ def staff_customer_profile_message(customer, coupons: list) -> str:
         lines.append("\n🎟 Купоны:")
         for i, c in enumerate(coupons, 1):
             until = c.valid_until.strftime("%d.%m.%Y")
-            lines.append(f"  {i}. Купон «{c.type}» — {c.value} ₽, действует до {until}")
+            lines.append(f"  {i}. {c.display_name} — {c.value} ₽, действует до {until}")
     else:
         lines.append("\nНет активных купонов.")
     return "\n".join(lines)

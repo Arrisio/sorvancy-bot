@@ -20,6 +20,7 @@ from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.broadcast import _create_broadcast, _nearest_window_slot, _ask_broadcast_recipients
 from src.handlers.callbacks._common import _delete_step_mids, _append_step_mid, _display_name
 from src.handlers.callbacks.financial_cb import handle_financial_callback
+from src.handlers.text_router import _apply_coupon_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
             return
         await bot.send_message(
             user_id=user_id,
-            text=f"Использовать купон «{c.type}» ({c.value} ₽)?",
+            text=f"Использовать купон «{c.display_name}» ({c.value} ₽)?",
             attachments=[confirm_coupon_keyboard(coupon_id)],
         )
         return
@@ -115,15 +116,21 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         if c is None:
             await bot.send_message(user_id=user_id, text="Купон уже недействителен.")
             return
-        await bot.send_message(user_id=user_id, text=f"Купон «{c.type}» использован.")
+        await bot.send_message(user_id=user_id, text=f"Купон «{c.display_name}» использован.")
         if cust:
             try:
                 await bot.send_message(
-                    user_id=cust.max_user_id, text=f"Купон «{c.type}» использован."
+                    user_id=cust.max_user_id, text=f"Купон «{c.display_name}» использован."
                 )
             except Exception:
                 logger.warning("Could not notify customer %s of coupon use", cust.max_user_id)
         await _send_customer_profile_by_id(bot, user_id, c.customer_id)
+        return
+
+    if payload == "coupon:accept_display_name":
+        data = await context.get_data()
+        display_name = data.get("coupon_draft_suggested_display_name", "")
+        await _apply_coupon_display_name(bot, user_id, context, display_name)
         return
 
     if payload == "coupon:cancel":
@@ -156,7 +163,11 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         data = await context.get_data()
         coupon_ctx = data.get("coupon_context", "seller")
         if coupon_ctx == "broadcast":
-            if state in (StaffState.AWAITING_COUPON_DAYS, StaffState.AWAITING_COUPON_PCT):
+            if state in (
+                StaffState.AWAITING_COUPON_DAYS,
+                StaffState.AWAITING_COUPON_PCT,
+                StaffState.AWAITING_COUPON_DISPLAY_NAME,
+            ):
                 await bot.send_message(
                     user_id=user_id,
                     text="Данные не сохранятся. Отменить рассылку?",
@@ -170,7 +181,11 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         else:
             await context.set_state(RegistrationState.REGISTERED)
             customer_id = data.get("coupon_target_customer_id")
-            if state in (StaffState.AWAITING_COUPON_DAYS, StaffState.AWAITING_COUPON_PCT) and customer_id:
+            if state in (
+                StaffState.AWAITING_COUPON_DAYS,
+                StaffState.AWAITING_COUPON_PCT,
+                StaffState.AWAITING_COUPON_DISPLAY_NAME,
+            ) and customer_id:
                 await bot.send_message(user_id=user_id, text="Выдача отменена.")
                 await _send_customer_profile_by_id(bot, user_id, customer_id)
             else:
@@ -203,6 +218,7 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         if state in (
             StaffState.AWAITING_COUPON_DAYS,
             StaffState.AWAITING_COUPON_PCT,
+            StaffState.AWAITING_COUPON_DISPLAY_NAME,
             StaffState.AWAITING_BROADCAST_RECIPIENTS,
             StaffState.AWAITING_BROADCAST_TIME,
         ):
