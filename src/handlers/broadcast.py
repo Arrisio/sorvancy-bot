@@ -25,27 +25,12 @@ from src.keyboards import (
 )
 from src.db.connection import get_session_factory
 from src.models import broadcast as broadcast_model
+from src.models import staff as staff_model
 from src.db.orm import Staff
+from src.handlers.callbacks._common import _append_step_mid, _delete_step_mids
 import config
 
 logger = logging.getLogger(__name__)
-
-
-async def _append_step_mid(context, mid: str) -> None:
-    data = await context.get_data()
-    mids = list(data.get("step_mids") or [])
-    mids.append(mid)
-    await context.update_data(step_mids=mids)
-
-
-async def _delete_step_mids(bot, context) -> None:
-    data = await context.get_data()
-    for mid in (data.get("step_mids") or []):
-        try:
-            await bot.delete_message(message_id=mid)
-        except Exception:
-            pass
-    await context.update_data(step_mids=[])
 
 
 def _in_window(dt: datetime) -> bool:
@@ -168,7 +153,6 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
         return
 
     try:
-        from src.models import staff as staff_model
         async with get_session_factory()() as session:
             async with session.begin():
                 staff_row = await staff_model.get_by_max_id(session, user_id)

@@ -25,6 +25,7 @@ class RegistrationState:
 
 class ProfileState:
     EDITING_CUSTOMER_FIELD = "editing_customer_field"
+    EDITING_CHILD_FIELD = "editing_child_field"
     ADDING_CHILD_NAME = "adding_child_name"
     ADDING_CHILD_GENDER = "adding_child_gender"
     ADDING_CHILD_BIRTHDATE = "adding_child_birthdate"

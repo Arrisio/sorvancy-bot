@@ -24,6 +24,7 @@ from src.services.discount import staff_customer_profile_message
 from src.services.invite import make_invite_token, staff_invite_deeplink
 from src.keyboards import staff_profile_keyboard
 from src.db.orm import Staff, Customer
+from src.handlers.callbacks.survey import _complete_survey
 
 
 def _phone_from_vcf(vcf_info: str | None) -> str | None:
@@ -71,7 +72,6 @@ async def register_staff_handlers(dp):
             phone = _phone_from_vcf(vcf_info)
             if phone:
                 await context.update_data(**{"draft.phone": phone})
-            from src.handlers.callback_router import _complete_survey
             await _complete_survey(event.bot, user_id, context)
         else:
             logger.warning("No contact attachment in AWAITING_CONTACT event for user %s", user_id)
