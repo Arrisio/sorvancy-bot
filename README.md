@@ -51,6 +51,7 @@
 | БД | PostgreSQL 14+ через SQLAlchemy 2.x async + asyncpg |
 | FSM | `maxapi.context.MemoryContext` (in-memory) |
 | Конфиг | `python-dotenv` + `.env` |
+| Бэкап БД | `pg_dump` → gzip → S3, отдельный Docker-сервис |
 
 ---
 
@@ -107,6 +108,52 @@ docker compose up -d
 
 ---
 
+## Резервное копирование БД
+
+### Как устроено
+
+Бэкап работает как отдельный сервис `backup` в `docker-compose.yml` — без cron на сервере.
+
+Схема: `pg_dump` → gzip → загрузка в S3-совместимое хранилище.
+
+- **Расписание:** ежедневно в 02:00 по `Asia/Yekaterinburg` (UTC+5)
+- **Формат файла:** `backup_YYYY-MM-DD.sql.gz`
+- **Путь в S3:** `{S3_PREFIX}/backup_YYYY-MM-DD.sql.gz`
+- **Retention:**
+  - последние 14 дней — хранятся все
+  - 15 дней — 6 месяцев — только 1-е числа месяца
+  - старше 6 месяцев — удаляются
+
+Сервис **не падает** при отсутствии конфигурации — уходит в dormant-режим и ждёт.
+
+### Настройка
+
+Создайте файл `.env.backup` рядом с `.env`:
+
+```bash
+cp .env.backup.example .env.backup
+# Заполнить переменные
+```
+
+| Переменная | Описание |
+|-----------|----------|
+| `S3_ENDPOINT_URL` | URL S3-совместимого хранилища |
+| `S3_BUCKET` | Имя бакета |
+| `S3_ACCESS_KEY` | Access key |
+| `S3_SECRET_KEY` | Secret key |
+| `S3_REGION` | Регион (по умолчанию `ru-1`) |
+| `S3_PREFIX` | Префикс пути в бакете (по умолчанию `backups`) |
+
+После создания `.env.backup` перезапустите сервис:
+
+```bash
+docker compose restart backup
+```
+
+> `.env.backup` не коммитится в git — добавлен в `.gitignore`.
+
+---
+
 ## Структура проекта
 
 ```
@@ -123,6 +170,8 @@ src/
   keyboards.py       — фабрики клавиатур
 scripts/
   migrate.py         — применение миграций
+  backup.py          — ежедневный бэкап PostgreSQL → S3
+Dockerfile.backup    — образ для сервиса бэкапа
 specs/               — полные спецификации продукта
 docs/
   max-botapi.md      — документация по библиотеке maxapi
