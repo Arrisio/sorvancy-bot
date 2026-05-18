@@ -11,8 +11,6 @@ DB_NAME: str = os.environ["DB_NAME"]
 DB_USER: str = os.environ["DB_USER"]
 DB_PASSWORD: str = os.environ["DB_PASSWORD"]
 
-DISCOUNT_PERCENT: int = int(os.environ.get("DISCOUNT_PERCENT", 10))
-
 OWNER_ID: int | None = (
     int(os.environ["OWNER_ID"]) if os.environ.get("OWNER_ID") else None
 )
@@ -28,5 +26,3 @@ DEEPLINK_BASE: str = os.environ.get("DEEPLINK_BASE", "")
 
 INVITE_SECRET: str = os.environ.get("INVITE_SECRET", "")
 
-BIRTHDAY_COUPON_VALUE: int = int(os.environ.get("BIRTHDAY_COUPON_VALUE", 300))
-BIRTHDAY_COUPON_VALID_DAYS: int = int(os.environ.get("BIRTHDAY_COUPON_VALID_DAYS", 7))

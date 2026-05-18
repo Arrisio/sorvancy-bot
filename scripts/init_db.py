@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy import select
 
 from src.db.connection import get_engine
-from src.db.orm import Base, Staff
+from src.db.orm import Base, Staff, FinancialConfig
 
 
 async def main():
@@ -19,9 +19,20 @@ async def main():
             await conn.run_sync(Base.metadata.create_all)
         print("DB schema up to date.")
 
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
+        async with async_session() as session:
+            existing_cfg = await session.scalar(
+                select(FinancialConfig).where(FinancialConfig.id == 1)
+            )
+            if not existing_cfg:
+                session.add(FinancialConfig(id=1))
+                await session.commit()
+                print("FinancialConfig singleton row created with defaults.")
+            else:
+                print("FinancialConfig row already exists, skipping.")
+
         owner_id = os.environ.get("OWNER_ID")
         if owner_id:
-            async_session = async_sessionmaker(engine, expire_on_commit=False)
             async with async_session() as session:
                 existing = await session.scalar(
                     select(Staff).where(Staff.max_user_id == int(owner_id))

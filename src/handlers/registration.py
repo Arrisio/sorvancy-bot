@@ -15,6 +15,7 @@ from src.keyboards import (
 )
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
+from src.models import financial_config as financial_config_model
 from src.services.discount import registration_complete_message, survey_offer_message
 import config
 
@@ -77,11 +78,12 @@ async def register_registration_handlers(dp):
         try:
             async with get_session_factory()() as session:
                 async with session.begin():
+                    cfg = await financial_config_model.get_or_create(session)
                     await customer_model.create(
                         session,
                         max_user_id=user_id,
                         max_username=username,
-                        discount_percent=config.DISCOUNT_PERCENT,
+                        discount_percent=cfg.registration_discount_pct,
                     )
             logger.info("Registered max_user_id=%s (phase 1)", user_id)
         except Exception:

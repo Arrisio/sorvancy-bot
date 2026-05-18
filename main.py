@@ -13,6 +13,7 @@ from src.handlers.profile import register_profile_handlers
 from src.handlers.staff import register_staff_handlers
 from src.handlers.broadcast import register_broadcast_handlers
 from src.handlers.excel import register_excel_handlers
+from src.handlers.financial_settings import register_financial_settings_handlers
 from src.handlers.text_router import register_text_router
 from src.handlers.callback_router import register_callback_router
 from src.scheduler import broadcast_delivery_loop, birthday_reminder_loop, coupon_expiry_loop
@@ -44,6 +45,7 @@ async def main():
     await register_staff_handlers(dp)
     await register_broadcast_handlers(dp)
     await register_excel_handlers(dp)
+    await register_financial_settings_handlers(dp)
 
     # Generic text — must come AFTER all exact-text handlers
     await register_text_router(dp)

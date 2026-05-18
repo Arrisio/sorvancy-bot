@@ -18,6 +18,7 @@ from src.models import broadcast as broadcast_model
 from src.models import child as child_model
 from src.models import coupon as coupon_model
 from src.models import customer as customer_model
+from src.models import financial_config as financial_config_model
 from maxapi.types.message import NewMessageLink
 from maxapi.enums.message_link_type import MessageLinkType
 from src.services.discount import coupon_issued_notification
@@ -180,11 +181,13 @@ async def _run_birthday_reminders(bot) -> None:
         try:
             async with get_session_factory()() as session:
                 async with session.begin():
+                    cfg = await financial_config_model.get_or_create(session)
                     coupon = await coupon_model.create_birthday_coupon(
                         session,
                         customer_id=cust.id,
-                        value=config.BIRTHDAY_COUPON_VALUE,
-                        valid_days=config.BIRTHDAY_COUPON_VALID_DAYS,
+                        value=cfg.birthday_coupon_value,
+                        valid_days=cfg.birthday_coupon_valid_days,
+                        max_payment_pct=cfg.birthday_coupon_max_pct,
                     )
                     await child_model.set_birthday_reminded_year(session, child.id, target_year)
 
@@ -195,7 +198,7 @@ async def _run_birthday_reminders(bot) -> None:
                 user_id=cust.max_user_id,
                 text=(
                     f"У {name_gent} через три дня день рождения. "
-                    f"Вот вам купон на скидку — {config.BIRTHDAY_COUPON_VALUE} руб., "
+                    f"Вот вам купон на скидку — {coupon.value} руб., "
                     f"действителен до {valid_until_str}."
                 ),
             )

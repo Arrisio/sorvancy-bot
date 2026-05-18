@@ -19,12 +19,17 @@ from src.models import broadcast as broadcast_model
 from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.broadcast import _create_broadcast, _nearest_window_slot, _ask_broadcast_recipients
 from src.handlers.callbacks._common import _delete_step_mids, _append_step_mid, _display_name
+from src.handlers.callbacks.financial_cb import handle_financial_callback
 
 logger = logging.getLogger(__name__)
 
 
 async def handle_staff_callback(event, context: MemoryContext, staff, state: str, payload: str, user_id: int) -> None:
     bot = event.bot
+
+    if payload.startswith("financial:") and staff.is_owner:
+        await handle_financial_callback(bot, user_id, state, payload, context)
+        return
 
     if payload.startswith("seller:delete:") and staff.is_owner:
         staff_id = int(payload.split(":")[-1])

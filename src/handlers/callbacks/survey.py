@@ -22,6 +22,7 @@ from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import child as child_model
 from src.models import coupon as coupon_model
+from src.models import financial_config as financial_config_model
 from src.services.discount import coupon_issued_notification
 from src.handlers.callbacks._common import (
     _append_step_mid,
@@ -372,7 +373,13 @@ async def _complete_survey(bot, user_id: int, context: MemoryContext) -> None:
                     )
                 survey_coupon = None
                 if not was_completed:
-                    survey_coupon = await coupon_model.create_survey_coupon(session, cust.id)
+                    cfg = await financial_config_model.get_or_create(session)
+                    survey_coupon = await coupon_model.create_survey_coupon(
+                        session, cust.id,
+                        value=cfg.survey_coupon_value,
+                        max_pct=cfg.survey_coupon_max_pct,
+                        valid_days=cfg.survey_coupon_valid_days,
+                    )
                 await customer_model.clear_survey_draft(session, user_id)
         logger.info("Survey saved for max_user_id=%s", user_id)
     except Exception:

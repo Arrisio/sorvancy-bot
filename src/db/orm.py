@@ -103,6 +103,33 @@ class Coupon(Base):
     customer: Mapped["Customer"] = relationship(back_populates="coupons")
 
 
+class FinancialConfig(Base):
+    __tablename__ = "financial_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # always 1
+    registration_discount_pct: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=10, server_default="10"
+    )
+    survey_coupon_value: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=300, server_default="300"
+    )
+    survey_coupon_valid_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default="30"
+    )
+    survey_coupon_max_pct: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default="30"
+    )
+    birthday_coupon_value: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=300, server_default="300"
+    )
+    birthday_coupon_valid_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=7, server_default="7"
+    )
+    birthday_coupon_max_pct: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default="30"
+    )
+
+
 class Broadcast(Base):
     __tablename__ = "broadcasts"
 

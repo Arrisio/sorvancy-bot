@@ -43,3 +43,4 @@ class StaffState:
     AWAITING_COUPON_VALUE = "awaiting_coupon_value"
     AWAITING_COUPON_DAYS = "awaiting_coupon_days"
     AWAITING_COUPON_PCT = "awaiting_coupon_pct"
+    AWAITING_FINANCIAL_PARAM_VALUE = "awaiting_financial_param_value"

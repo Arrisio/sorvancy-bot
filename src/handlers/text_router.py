@@ -19,6 +19,7 @@ from src.models import child as child_model
 from src.models import coupon as coupon_model
 from src.models import staff as staff_model
 from src.models import broadcast as broadcast_model
+from src.models import financial_config as financial_config_model
 from src.keyboards import (
     registered_keyboard,
     unregistered_keyboard,
@@ -42,6 +43,10 @@ from src.handlers.profile import _profile_text, _child_text
 from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast, _in_window, _ask_broadcast_recipients, _save_broadcast_source
 from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.callbacks._common import _persist_survey_draft, _append_step_mid, _delete_step_mids, _send_step
+from src.handlers.financial_settings import (
+    financial_summary_text, financial_summary_keyboard,
+    survey_coupon_card_text, birthday_coupon_card_text, coupon_card_keyboard,
+)
 from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
@@ -68,6 +73,22 @@ async def register_text_router(dp):
 
         # --- Customer / registration routes ---
         await _handle_customer_text(event, context, customer, state, text, user_id, route)
+
+
+def _validate_financial_field(field: str, val: int) -> str | None:
+    if field == "registration_discount_pct":
+        if val < 1 or val > 100:
+            return "Введите число от 1 до 100."
+    elif field.endswith("_value"):
+        if val <= 0:
+            return "Сумма должна быть больше 0."
+    elif field.endswith("_valid_days"):
+        if val <= 0:
+            return "Срок должен быть больше 0."
+    elif field.endswith("_max_pct"):
+        if val < 1 or val > 100:
+            return "Введите процент от 1 до 100."
+    return None
 
 
 async def _handle_staff_text(event, context, staff, state, text, user_id):
@@ -127,6 +148,75 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 return
             await _create_broadcast(bot, user_id, context, scheduled_at)
             return
+
+    # Scenario 22: financial parameter input
+    if state == StaffState.AWAITING_FINANCIAL_PARAM_VALUE:
+        data = await context.get_data()
+        field = data.get("financial_editing_field")
+        prompt_mid = data.get("financial_prompt_mid")
+        card_mid = data.get("financial_card_mid")
+        card_type = data.get("financial_card_type", "summary")
+
+        if field is None:
+            await context.set_state(RegistrationState.REGISTERED)
+            return
+
+        try:
+            val = int(text)
+        except ValueError:
+            await bot.send_message(
+                user_id=user_id, text="Введите целое число.",
+                attachments=[cancel_keyboard("financial:cancel")],
+            )
+            return
+
+        error = _validate_financial_field(field, val)
+        if error:
+            await bot.send_message(
+                user_id=user_id, text=error,
+                attachments=[cancel_keyboard("financial:cancel")],
+            )
+            return
+
+        try:
+            async with get_session_factory()() as session:
+                async with session.begin():
+                    cfg = await financial_config_model.update_field(session, **{field: val})
+        except Exception:
+            logger.exception("FinancialConfig update failed for field=%s", field)
+            await bot.send_message(
+                user_id=user_id, text="Не удалось сохранить. Попробуйте ещё раз.",
+                attachments=[cancel_keyboard("financial:cancel")],
+            )
+            return
+
+        if prompt_mid:
+            try:
+                await bot.delete_message(message_id=prompt_mid)
+            except Exception:
+                pass
+
+        await context.set_state(RegistrationState.REGISTERED)
+        await context.update_data(financial_editing_field=None, financial_prompt_mid=None)
+
+        if card_type == "survey":
+            card_text = survey_coupon_card_text(cfg)
+            keyboard = coupon_card_keyboard("survey")
+        elif card_type == "birthday":
+            card_text = birthday_coupon_card_text(cfg)
+            keyboard = coupon_card_keyboard("birthday")
+        else:
+            card_text = financial_summary_text(cfg)
+            keyboard = financial_summary_keyboard()
+
+        if card_mid:
+            try:
+                await bot.edit_message(message_id=card_mid, text=card_text, attachments=[keyboard])
+            except Exception:
+                await bot.send_message(user_id=user_id, text=card_text, attachments=[keyboard])
+        else:
+            await bot.send_message(user_id=user_id, text=card_text, attachments=[keyboard])
+        return
 
     # Scenario 15 Flow B: coupon issuance
     if state == StaffState.AWAITING_COUPON_VALUE:
@@ -543,7 +633,13 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                         await customer_model.update_field(
                             session, customer.id, survey_completed=True
                         )
-                        new_survey_coupon = await coupon_model.create_survey_coupon(session, customer.id)
+                        cfg = await financial_config_model.get_or_create(session)
+                        new_survey_coupon = await coupon_model.create_survey_coupon(
+                            session, customer.id,
+                            value=cfg.survey_coupon_value,
+                            max_pct=cfg.survey_coupon_max_pct,
+                            valid_days=cfg.survey_coupon_valid_days,
+                        )
                     children = await child_model.get_by_customer(session, customer.id)
         except Exception:
             logger.exception("Add child failed")

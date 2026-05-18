@@ -18,6 +18,7 @@ STAFF_LIST_BTN_TEXT = "Показать продавцов"
 ADD_SELLER_BTN_TEXT = "Добавить продавца"
 BROADCAST_CREATE_BTN_TEXT = "Запустить рассылку"
 BROADCAST_LIST_BTN_TEXT = "Запланированные рассылки"
+FINANCIAL_SETTINGS_BTN_TEXT = "Финансовые настройки"
 
 
 # --- Persistent reply keyboards ---
@@ -47,6 +48,7 @@ def superuser_keyboard():
         [MessageButton(text=STAFF_LIST_BTN_TEXT), MessageButton(text=ADD_SELLER_BTN_TEXT)],
         [MessageButton(text=BROADCAST_CREATE_BTN_TEXT)],
         [MessageButton(text=BROADCAST_LIST_BTN_TEXT)],
+        [MessageButton(text=FINANCIAL_SETTINGS_BTN_TEXT)],
     ]).pack()
 
 
