@@ -99,4 +99,4 @@ Read from `FinancialConfig` at issuance time (scenario 22). Same config fields u
 ## Open questions
 - [x] `birthday_coupon_max_pct` default: 30%. RESOLVED.
 - [ ] `Customer.birthday_reminded_year` field not in ORM or DB schema. Migration needed.
-- [ ] Flow A and Flow B run as single job or two separate jobs? Execution order matters if same Customer qualifies for both on same day.
+- [x] Flow A and Flow B run as single job or two separate jobs? RESOLVED: single job; Flow A first, then Flow B. UX degradation (two messages in quick succession) acceptable.
