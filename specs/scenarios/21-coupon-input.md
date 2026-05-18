@@ -16,12 +16,12 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 
 ## Main flow
 
-1. Bot sends: «Введите максимальную сумму купона (в рублях, 101–1000):» + button [Отмена]
-2. Operator types integer 101–1000 → `coupon_draft.value`.
-3. Bot sends: «Срок действия купона (в днях, минимум 7):» + button [Отмена]
-4. Operator types integer ≥ 7 → `coupon_draft.validity_days`.
-5. Bot sends: «Введите % суммы покупки, которые можно оплатить купоном (до 30%):» + button [Отмена]
-6. Operator types integer 1–30 → `coupon_draft.max_payment_pct`.
+1. Bot sends: «Введите максимальную сумму купона (в рублях, 100–5000):» + buttons [300] [500] [1000] [Отмена] in one row.
+2. Operator types integer 100–5000 **or** taps quick-value button → `coupon_draft.value`.
+3. Bot sends: «Срок действия купона (в днях, минимум 7):» + buttons [7] [14] [30] [60] [Отмена] in one row.
+4. Operator types integer ≥ 7 **or** taps quick-value button → `coupon_draft.validity_days`.
+5. Bot sends: «Введите % суммы покупки, которые можно оплатить купоном (1–100%):» + buttons [30] [50] [70] [Отмена] in one row.
+6. Operator types integer 1–100 **or** taps quick-value button → `coupon_draft.max_payment_pct`.
 7. Bot computes suggested default display name: `"{value} ₽ до {ДД.ММ.ГГ}"` where date = today + `validity_days`.
    Bot sends: «Название купона в кнопке (видит покупатель, макс. 40 символов). Предложение: «{suggested}». Введите своё или примите предложенное.» + buttons [Принять] [Отмена]
 8. Operator clicks [Принять] → `coupon_draft.display_name = suggested`; OR operator types text (≤ 40 chars) → `coupon_draft.display_name = typed_text`.
@@ -38,16 +38,16 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 - Bot: «Введите целое число.»
 - Operator retries same step.
 
-### N2: `value` out of range (≤100 or >1000)
-- Bot: «Введите сумму от 101 до 1000 рублей.»
+### N2: `value` out of range (<100 or >5000)
+- Bot: «Введите сумму от 100 до 5000 рублей.»
 - Operator retries step 2.
 
 ### N3: `validity_days` < 7
 - Bot: «Срок должен быть не менее 7 дней.»
 - Operator retries step 4.
 
-### N4: `max_payment_pct` out of range (<1 or >30)
-- Bot: «Введите процент от 1 до 30.»
+### N4: `max_payment_pct` out of range (<1 or >100)
+- Bot: «Введите процент от 1 до 100.»
 - Operator retries step 6.
 
 ### N5: `display_name` exceeds 40 chars
@@ -59,4 +59,4 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 - No DB writes performed by this sub-scenario.
 
 ## Open questions
-- [x] N4 absent from current scenario 15 implementation — `max_payment_pct` range validation added; UI cap set to 30 (entity allows 1–100, operator input capped at 30). RESOLVED.
+- [x] N4 absent from current scenario 15 implementation — `max_payment_pct` range validation added; UI cap raised to 100 (entity allows 1–100). RESOLVED.

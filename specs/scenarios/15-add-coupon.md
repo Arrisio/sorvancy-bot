@@ -43,7 +43,7 @@ Bot sends customer:
 ## Alternative flows
 
 ### A1: Cancellation during Flow B
-- Seller clicks [Отмена] at step 2, or sub-scenario 21 signals cancellation → no DB write; scenario ends; profile message unchanged.
+- Seller clicks [Отмена] at step 2, or sub-scenario 21 signals cancellation → no DB write; Bot sends seller updated customer profile (same format as step 6 in main flow).
 
 ## Negative scenarios
 
