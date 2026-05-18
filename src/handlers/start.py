@@ -18,6 +18,7 @@ from src.db.orm import Staff, Customer
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import staff as staff_model
+from src.models import coupon as coupon_model
 from src.services.discount import make_qr_png, customer_qr_deeplink
 from src.services.invite import verify_invite_token
 from src.handlers.staff import _send_customer_profile_by_id
@@ -189,6 +190,7 @@ async def _route_start(bot, user_id: int, username: str | None, context: MemoryC
 async def _send_discount_qr(bot, user_id: int):
     async with get_session_factory()() as session:
         customer = await customer_model.get_by_max_id(session, user_id)
+        coupons = await coupon_model.get_active_by_customer(session, customer.id) if customer else []
     if not customer:
         await bot.send_message(
             user_id=user_id,
@@ -197,10 +199,17 @@ async def _send_discount_qr(bot, user_id: int):
         )
         return
     link = customer_qr_deeplink(customer.id)
+    coupon_block = ""
+    if coupons:
+        shown = coupons[:20]
+        lines = "\n".join(f"🎁 {c.display_name}" for c in shown)
+        tail = f"\n…и ещё {len(coupons) - 20}" if len(coupons) > 20 else ""
+        coupon_block = f"\nВаши купоны:\n{lines}{tail}\n"
     text = (
         f"Покажите этот QR-код продавцу\n"
         f"Номер клиента: {customer.id}\n"
-        f"Скидка: {customer.discount_percent}%\n\n"
+        f"Скидка: {customer.discount_percent}%\n"
+        f"{coupon_block}\n"
         f"Ссылка для продавца:\n{link}"
     )
     try:

@@ -75,6 +75,10 @@ async def handle_financial_callback(
         prompt = _FIELD_PROMPTS.get(field)
         if prompt is None:
             return
+        if field == "registration_discount_pct":
+            async with get_session_factory()() as session:
+                cfg = await financial_config_model.get_or_create(session)
+            prompt = f"{prompt}\nСейчас: {cfg.registration_discount_pct}%"
         await context.update_data(financial_editing_field=field)
         await context.set_state(StaffState.AWAITING_FINANCIAL_PARAM_VALUE)
         sent = await bot.send_message(

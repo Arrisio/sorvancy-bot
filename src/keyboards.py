@@ -8,7 +8,7 @@ from maxapi.types import (
 
 # --- Reply keyboard button labels ---
 REGISTER_BTN_TEXT = "Зарегистрироваться и получить скидку"
-DISCOUNT_BTN_TEXT = "Скидка"
+DISCOUNT_BTN_TEXT = "🎁 Скидка и купоны"
 MY_PROFILE_BTN_TEXT = "Мой профиль"
 CONTACT_STAFF_BTN_TEXT = "Связаться с продавцом"
 
@@ -29,9 +29,8 @@ def unregistered_keyboard():
 
 def registered_keyboard():
     return ButtonsPayload(buttons=[
-        [MessageButton(text=MY_PROFILE_BTN_TEXT)],
         [MessageButton(text=DISCOUNT_BTN_TEXT)],
-        [MessageButton(text=CONTACT_STAFF_BTN_TEXT)],
+        [MessageButton(text=MY_PROFILE_BTN_TEXT), MessageButton(text=CONTACT_STAFF_BTN_TEXT)],
     ]).pack()
 
 

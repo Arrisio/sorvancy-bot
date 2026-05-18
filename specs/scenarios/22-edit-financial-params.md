@@ -70,7 +70,7 @@ Owner taps any [✏️ …] button (on summary screen or coupon card):
 
 | Field | Prompt |
 |-------|--------|
-| `registration_discount_pct` | «Введите новое значение скидки при регистрации (1–100):» |
+| `registration_discount_pct` | «Введите новое значение скидки при регистрации (1–100):\nСейчас: X%» (X — текущее значение из БД) |
 | `survey_coupon_value` | «Введите сумму купона за анкету (целое число ₽, > 0):» |
 | `survey_coupon_valid_days` | «Введите срок действия купона за анкету (целое число дней, > 0):» |
 | `survey_coupon_max_pct` | «Введите макс. % от покупки для купона за анкету (1–100):» |
