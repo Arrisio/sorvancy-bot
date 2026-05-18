@@ -186,6 +186,7 @@ async def _run_birthday_reminders(bot) -> None:
                         value=config.BIRTHDAY_COUPON_VALUE,
                         valid_days=config.BIRTHDAY_COUPON_VALID_DAYS,
                     )
+                    await child_model.set_birthday_reminded_year(session, child.id, target_year)
 
             name_gent = _to_genitive(child.name)
             valid_until_str = coupon.valid_until.astimezone(_PERM_TZ).strftime("%d.%m.%Y")
@@ -198,9 +199,6 @@ async def _run_birthday_reminders(bot) -> None:
                     f"действителен до {valid_until_str}."
                 ),
             )
-
-            async with get_session_factory()() as session:
-                await child_model.set_birthday_reminded_year(session, child.id, target_year)
 
         except Exception:
             logger.exception("Birthday reminder failed for child %s", child.id)

@@ -20,6 +20,8 @@ from src.models import customer as customer_model
 from src.models import staff as staff_model
 from src.services.discount import make_qr_png, customer_qr_deeplink
 from src.services.invite import verify_invite_token
+from src.handlers.staff import _send_customer_profile_by_id
+from src.handlers.callbacks._common import _display_name
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ async def register_start_handlers(dp):
                     existing = await staff_model.get_by_max_id(session, user_id)
                 first_name = getattr(event.user, "first_name", None) or getattr(event.user, "name", None)
                 last_name = getattr(event.user, "last_name", None)
-                name = " ".join(filter(None, [first_name or "", last_name or ""])) or str(user_id)
+                name = _display_name(first_name, last_name) or str(user_id)
                 if existing:
                     await event.bot.send_message(
                         user_id=user_id,
@@ -102,7 +104,6 @@ async def register_start_handlers(dp):
                 except ValueError:
                     pass
                 else:
-                    from src.handlers.staff import _send_customer_profile_by_id
                     await _send_customer_profile_by_id(event.bot, user_id, cid)
                     return
 
@@ -133,10 +134,9 @@ async def register_start_handlers(dp):
     async def on_contact_staff(event: MessageCreated, context: MemoryContext):
         user_id = event.message.sender.user_id
         async with get_session_factory()() as session:
-            customer = await customer_model.get_by_max_id(session, user_id)
-        if customer:
-            async with get_session_factory()() as session:
-                async with session.begin():
+            async with session.begin():
+                customer = await customer_model.get_by_max_id(session, user_id)
+                if customer:
                     await customer_model.update_field(
                         session, customer.id, last_touch=datetime.now(tz=timezone.utc)
                     )

@@ -34,13 +34,14 @@ from src.keyboards import (
     children_list_keyboard,
     cancel_keyboard,
     broadcast_start_keyboard,
+    child_card_keyboard,
 )
 import config
 from src.handlers.registration import _format_confirmation, _parse_date, _parse_int_list
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast, _in_window, _ask_broadcast_recipients
+from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast, _in_window, _ask_broadcast_recipients, _save_broadcast_source
 from src.handlers.staff import _send_customer_profile_by_id
-from src.handlers.callbacks._common import _persist_survey_draft, _append_step_mid, _delete_step_mids
+from src.handlers.callbacks._common import _persist_survey_draft, _append_step_mid, _delete_step_mids, _send_step
 from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
@@ -75,67 +76,54 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
     # Broadcast states (owner only)
     if staff.is_owner:
         if state == StaffState.AWAITING_BROADCAST_MSG:
-            from src.handlers.broadcast import _save_broadcast_source
             await _save_broadcast_source(event, context)
             return
 
         if state == StaffState.AWAITING_BROADCAST_RECIPIENTS:
             ids = list(dict.fromkeys(_parse_int_list(text)))
             if not ids:
-                sent = await bot.send_message(
-                    user_id=user_id,
-                    text=(
-                        "Не удалось разобрать список ID. Попробуйте ещё раз.\n"
-                        "Шаг 3 из 4 · Пришлите номера клиентов (через запятую или с новой строки):"
-                    ),
-                    attachments=[cancel_keyboard("broadcast:cancel_create")],
+                await _send_step(
+                    bot, user_id, context,
+                    "Не удалось разобрать список ID. Попробуйте ещё раз.\n"
+                    "Шаг 3 из 4 · Пришлите номера клиентов (через запятую или с новой строки):",
+                    cancel_keyboard("broadcast:cancel_create"),
                 )
-                await _append_step_mid(context, sent.message.body.mid)
                 return
             async with get_session_factory()() as session:
                 eligible = await broadcast_model.get_eligible_customer_ids(session, ids)
             await context.update_data(broadcast_recipient_ids=eligible)
             await context.set_state(StaffState.AWAITING_BROADCAST_TIME)
-            sent = await bot.send_message(
-                user_id=user_id,
-                text=(
-                    f"Шаг 4 из 4 · Создана рассылка на {len(eligible)} получателей. Когда её начать?\n"
-                    f"Рассылку можно запланировать с {config.BROADCAST_WINDOW_START_HOUR}:00 "
-                    f"до {config.BROADCAST_WINDOW_END_HOUR}:00.\n"
-                    "Укажите дату:\n"
-                    f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
-                    "  • «25.06 14:30» — 25 июня в 14:30"
-                ),
-                attachments=[broadcast_start_keyboard()],
+            await _send_step(
+                bot, user_id, context,
+                f"Шаг 4 из 4 · Создана рассылка на {len(eligible)} получателей. Когда её начать?\n"
+                f"Рассылку можно запланировать с {config.BROADCAST_WINDOW_START_HOUR}:00 "
+                f"до {config.BROADCAST_WINDOW_END_HOUR}:00.\n"
+                "Укажите дату:\n"
+                f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
+                "  • «25.06 14:30» — 25 июня в 14:30",
+                broadcast_start_keyboard(),
             )
-            await _append_step_mid(context, sent.message.body.mid)
             return
 
         if state == StaffState.AWAITING_BROADCAST_TIME:
             scheduled_at = _parse_scheduled_at(text)
             if scheduled_at is None:
-                sent = await bot.send_message(
-                    user_id=user_id,
-                    text=(
-                        "Шаг 4 из 4 · Не понял дату. Укажите в формате «ДД.ММ» или «ДД.ММ ЧЧ:ММ»:\n"
-                        f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
-                        "  • «25.06 14:30» — 25 июня в 14:30"
-                    ),
-                    attachments=[broadcast_start_keyboard()],
+                await _send_step(
+                    bot, user_id, context,
+                    "Шаг 4 из 4 · Не понял дату. Укажите в формате «ДД.ММ» или «ДД.ММ ЧЧ:ММ»:\n"
+                    f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
+                    "  • «25.06 14:30» — 25 июня в 14:30",
+                    broadcast_start_keyboard(),
                 )
-                await _append_step_mid(context, sent.message.body.mid)
                 return
             if not _in_window(scheduled_at):
-                sent = await bot.send_message(
-                    user_id=user_id,
-                    text=(
-                        f"Шаг 4 из 4 · Время {scheduled_at.strftime('%H:%M')} недоступно. "
-                        f"Укажите с {config.BROADCAST_WINDOW_START_HOUR}:00 "
-                        f"до {config.BROADCAST_WINDOW_END_HOUR}:00:"
-                    ),
-                    attachments=[broadcast_start_keyboard()],
+                await _send_step(
+                    bot, user_id, context,
+                    f"Шаг 4 из 4 · Время {scheduled_at.strftime('%H:%M')} недоступно. "
+                    f"Укажите с {config.BROADCAST_WINDOW_START_HOUR}:00 "
+                    f"до {config.BROADCAST_WINDOW_END_HOUR}:00:",
+                    broadcast_start_keyboard(),
                 )
-                await _append_step_mid(context, sent.message.body.mid)
                 return
             await _create_broadcast(bot, user_id, context, scheduled_at)
             return
@@ -345,36 +333,33 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         await context.update_data(**{"draft.first_name": text})
         await context.set_state(RegistrationState.AWAITING_LAST_NAME)
         await _persist_survey_draft(context, user_id)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text="Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. "
-                 "Можно пропустить 😊",
-            attachments=[back_and_skip_keyboard("survey:cancel")],
+        await _send_step(
+            bot, user_id, context,
+            "Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. "
+            "Можно пропустить 😊",
+            back_and_skip_keyboard("survey:cancel"),
         )
-        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_LAST_NAME:
         await context.update_data(**{"draft.last_name": text})
         await context.set_state(RegistrationState.AWAITING_CUSTOMER_BIRTHDATE)
         await _persist_survey_draft(context, user_id)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text="Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
-            attachments=[back_and_skip_keyboard("survey:cancel")],
+        await _send_step(
+            bot, user_id, context,
+            "Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
+            back_and_skip_keyboard("survey:cancel"),
         )
-        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
         bd = _parse_date(text)
         if bd is None:
-            sent = await bot.send_message(
-                user_id=user_id,
-                text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
-                attachments=[back_and_skip_keyboard("survey:cancel")],
+            await _send_step(
+                bot, user_id, context,
+                "Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                back_and_skip_keyboard("survey:cancel"),
             )
-            await _append_step_mid(context, sent.message.body.mid)
             return
         await context.update_data(**{"draft.birthdate": str(bd)})
         data = await context.get_data()
@@ -382,18 +367,17 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         await context.set_state(RegistrationState.AWAITING_CHILD_NAME)
         await _persist_survey_draft(context, user_id)
         if not children:
-            sent = await bot.send_message(
-                user_id=user_id,
-                text="Шаг 4 из 4 · Как зовут вашего ребёнка?",
-                attachments=[buy_for_self_keyboard()],
+            await _send_step(
+                bot, user_id, context,
+                "Шаг 4 из 4 · Как зовут вашего ребёнка?",
+                buy_for_self_keyboard(),
             )
         else:
-            sent = await bot.send_message(
-                user_id=user_id,
-                text=f"Ребёнок {len(children) + 1} · шаг 1 из 3 · Как зовут ребёнка?",
-                attachments=[back_keyboard()],
+            await _send_step(
+                bot, user_id, context,
+                f"Ребёнок {len(children) + 1} · шаг 1 из 3 · Как зовут ребёнка?",
+                back_keyboard(),
             )
-        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_CHILD_NAME:
@@ -404,24 +388,22 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_CHILD_GENDER)
         await _persist_survey_draft(context, user_id)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text=f"Ребёнок {n} · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? "
-                 "Подберём подходящие предложения:",
-            attachments=[gender_keyboard()],
+        await _send_step(
+            bot, user_id, context,
+            f"Ребёнок {n} · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? "
+            "Подберём подходящие предложения:",
+            gender_keyboard(),
         )
-        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
         bd = _parse_date(text)
         if bd is None:
-            sent = await bot.send_message(
-                user_id=user_id,
-                text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
-                attachments=[back_and_skip_keyboard("survey:cancel")],
+            await _send_step(
+                bot, user_id, context,
+                "Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                back_and_skip_keyboard("survey:cancel"),
             )
-            await _append_step_mid(context, sent.message.body.mid)
             return
         data = await context.get_data()
         children = data.get("draft.children", [])
@@ -431,12 +413,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         n = len(children)
         await context.set_state(RegistrationState.AWAITING_MORE_CHILDREN)
         await _persist_survey_draft(context, user_id)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text=f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",
-            attachments=[yes_no_keyboard("more_children:yes", "more_children:no")],
+        await _send_step(
+            bot, user_id, context,
+            f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",
+            yes_no_keyboard("more_children:yes", "more_children:no"),
         )
-        await _append_step_mid(context, sent.message.body.mid)
         return
 
     # Survey confirmation card inline edit
@@ -447,12 +428,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
             if field == "birthdate":
                 val = _parse_date(text)
                 if val is None:
-                    sent = await bot.send_message(
-                        user_id=user_id,
-                        text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
-                        attachments=[back_keyboard()],
+                    await _send_step(
+                        bot, user_id, context,
+                        "Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                        back_keyboard(),
                     )
-                    await _append_step_mid(context, sent.message.body.mid)
                     return
                 val = str(val)
             else:
@@ -526,12 +506,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
     if state == ProfileState.ADDING_CHILD_NAME:
         await context.update_data(**{"new_child.name": text})
         await context.set_state(ProfileState.ADDING_CHILD_GENDER)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text="Ваш ребёнок — мальчик или девочка?",
-            attachments=[gender_keyboard()],
+        await _send_step(
+            bot, user_id, context,
+            "Ваш ребёнок — мальчик или девочка?",
+            gender_keyboard(),
         )
-        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == ProfileState.ADDING_CHILD_BIRTHDATE:
@@ -587,7 +566,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                 logger.warning("Could not send coupon notification to user %s", user_id)
         return
 
-    if state == "editing_child_field":
+    if state == ProfileState.EDITING_CHILD_FIELD:
         if customer is None:
             async with get_session_factory()() as session:
                 customer = await customer_model.get_by_max_id(session, user_id)
@@ -615,7 +594,6 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
             logger.exception("Child field update failed")
             await bot.send_message(user_id=user_id, text="Не удалось сохранить. Попробуйте ещё раз.")
             return
-        from src.keyboards import child_card_keyboard
         await context.set_state(RegistrationState.REGISTERED)
         await bot.send_message(
             user_id=user_id,

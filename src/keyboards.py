@@ -34,14 +34,6 @@ def registered_keyboard():
     ]).pack()
 
 
-def registered_keyboard_with_contact():
-    return ButtonsPayload(buttons=[
-        [MessageButton(text=MY_PROFILE_BTN_TEXT)],
-        [MessageButton(text=DISCOUNT_BTN_TEXT)],
-        [MessageButton(text=CONTACT_STAFF_BTN_TEXT)],
-    ]).pack()
-
-
 def staff_keyboard():
     return ButtonsPayload(buttons=[
         [MessageButton(text=STAFF_FIND_BTN_TEXT)],

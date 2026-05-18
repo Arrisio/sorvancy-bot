@@ -9,7 +9,6 @@ from maxapi.context import MemoryContext
 from src.states import RegistrationState
 from src.keyboards import (
     registered_keyboard,
-    registered_keyboard_with_contact,
     unregistered_keyboard,
     survey_offer_keyboard,
     REGISTER_BTN_TEXT,
@@ -104,7 +103,7 @@ async def register_registration_handlers(dp):
         await event.bot.send_message(
             user_id=user_id,
             text=registration_complete_message(),
-            attachments=[registered_keyboard_with_contact()],
+            attachments=[registered_keyboard()],
         )
 
         try:
