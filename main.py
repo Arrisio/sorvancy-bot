@@ -58,7 +58,10 @@ async def main():
     logger.info("Starting polling...")
     try:
         await dp.start_polling(bot)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        pass
     finally:
+        await bot.close_session()
         await close_engine()
         logger.info("Shutdown complete")
 
