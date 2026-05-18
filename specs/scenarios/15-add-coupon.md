@@ -21,7 +21,7 @@ Customer receives new coupon and notification of issuance.
 ### Flow A — Automated (survey completion)
 
 1. Scenario 02 completes with survey_completed False → True; sends «Анкета заполнена! Спасибо 🎉».
-2. Bot creates Coupon: `type=anket`, `value=300`, `max_payment_pct=30`, `valid_until=now()+1 month`.
+2. Bot creates Coupon: `type=anket`, `value=FinancialConfig.survey_coupon_value`, `max_payment_pct=FinancialConfig.survey_coupon_max_pct`, `valid_until=now()+FinancialConfig.survey_coupon_valid_days days`.
 3. Bot sends customer notification (see Notification section).
 
 ### Flow B — Seller-initiated

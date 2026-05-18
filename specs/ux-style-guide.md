@@ -69,6 +69,7 @@ Note: Staff triggers scenario 06 (Show Customer Profile) via deeplink — no key
 | «Показать продавцов» | → 09 Staff List Management |
 | «Запустить рассылку» | → 11 Create and Schedule Broadcast |
 | «Запланированные рассылки» | → 12 Show Scheduled Broadcasts |
+| «Финансовые настройки» | → 22 Edit Financial Parameters |
 
 Note: Superuser registers sellers via contact card forwarding — no keyboard button; out-of-band onboarding by design.
 

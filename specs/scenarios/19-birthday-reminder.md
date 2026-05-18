@@ -23,18 +23,20 @@ Daily scheduled job fires.
 3. Skip child if `birthday_reminded_year = year_of(today + 3 days)` — already reminded this year
 4. For each remaining child: load parent Customer
 5. Decline child's name to Russian genitive case (e.g. «Маша» → «Маши», «Дима» → «Димы»); uses Russian morphology library (pymorphy2 or equivalent)
-6. Issue coupon to Customer: type=`birthday`, value=`BIRTHDAY_COUPON_VALUE`, valid_until=now()+`BIRTHDAY_COUPON_VALID_DAYS` days
+6. Issue coupon to Customer: type=`birthday`, value=`FinancialConfig.birthday_coupon_value`, max_payment_pct=`FinancialConfig.birthday_coupon_max_pct`, valid_until=now()+`FinancialConfig.birthday_coupon_valid_days` days
 7. Send message to Customer:
-   «У [имя в родительном падеже] через три дня день рождения. Вот вам купон на скидку — [BIRTHDAY_COUPON_VALUE] руб., действителен до [дата].»
+   «У [имя в родительном падеже] через три дня день рождения. Вот вам купон на скидку — [birthday_coupon_value] руб., действителен до [дата].»
 8. Set Child.birthday_reminded_year = year_of(today + 3 days)
 
-## Coupon parameters (env vars)
+## Coupon parameters
 
-| Env var | Default |
-|---------|---------|
-| `BIRTHDAY_COUPON_VALUE` | 300 |
-| `BIRTHDAY_COUPON_VALID_DAYS` | 7 |
-| `BIRTHDAY_COUPON_MAX_PAYMENT_PCT` | — (open) |
+Read from `FinancialConfig` at issuance time (scenario 22). Defaults:
+
+| Field | Default |
+|-------|---------|
+| `birthday_coupon_value` | 300 |
+| `birthday_coupon_valid_days` | 7 |
+| `birthday_coupon_max_pct` | 30 |
 
 ## Deduplication
 
@@ -53,4 +55,4 @@ Daily scheduled job fires.
 - pii.md
 
 ## Open questions
-- [ ] `BIRTHDAY_COUPON_MAX_PAYMENT_PCT` default value: not specified.
+- [x] `birthday_coupon_max_pct` default: 30%. RESOLVED.

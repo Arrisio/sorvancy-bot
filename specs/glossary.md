@@ -30,3 +30,4 @@
 | Номер клиента | Customer identifier shown on discount card (scenario 03) and entered by staff in scenario 10. Exact field TBD — see open question in scenario 03. |
 | staff_keyboard | Persistent keyboard for Staff (`is_owner = false`, `customer_mode = false`). Button routing: `specs/ux-style-guide.md` §2.1. |
 | superuser_keyboard | Persistent keyboard for Superuser (`is_owner = true`, `customer_mode = false`). Button routing: `specs/ux-style-guide.md` §2.1. |
+| FinancialConfig | Singleton DB entity (one row) holding all owner-editable financial parameters: registration discount %, and value/validity/max-pct for survey and birthday coupons. See `specs/entities/financial-config.md`. |

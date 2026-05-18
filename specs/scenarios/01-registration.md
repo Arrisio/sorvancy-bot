@@ -23,7 +23,7 @@ New Max user gets registered and receives discount in one button click, no form 
 
 3. Bot checks DB: no existing Customer
 
-4. Bot creates Customer: `max_user_id`, `max_username`, `discount_percent` (from `config.DISCOUNT_PERCENT`)
+4. Bot creates Customer: `max_user_id`, `max_username`, `discount_percent` (from `FinancialConfig.registration_discount_pct`)
 
 5. Bot sets FSM state = `REGISTERED`, initializes MemoryContext: `max_user_id`, `max_username`, `children=[]`
 
