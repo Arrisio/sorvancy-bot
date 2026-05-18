@@ -100,7 +100,7 @@ def gender_keyboard():
 def buy_for_self_keyboard():
     """Step 4 — child name — with optional 'buy for self' when 0 children."""
     builder = InlineKeyboardBuilder()
-    builder.row(CallbackButton(text="Купить для себя", payload="buy_for_self"))
+    builder.row(CallbackButton(text="Покупаю для себя", payload="buy_for_self"))
     builder.row(CallbackButton(text="← Назад", payload="back"))
     return builder.as_markup()
 
