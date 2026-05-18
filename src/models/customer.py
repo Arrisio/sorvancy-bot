@@ -121,3 +121,27 @@ async def clear_survey_draft(
 
 async def is_registered(session: AsyncSession, max_user_id: int) -> bool:
     return await get_by_max_id(session, max_user_id) is not None
+
+
+async def get_customers_for_birthday_reminder(
+    session: AsyncSession, target_month: int, target_day: int
+) -> list[Customer]:
+    result = await session.execute(
+        select(Customer).where(Customer.birthdate.isnot(None))
+    )
+    candidates = list(result.scalars())
+    return [
+        c for c in candidates
+        if c.birthdate is not None
+        and c.birthdate.month == target_month
+        and c.birthdate.day == target_day
+    ]
+
+
+async def set_birthday_reminded_year(
+    session: AsyncSession, customer_id: int, year: int
+) -> None:
+    await session.execute(
+        update(Customer).where(Customer.id == customer_id).values(birthday_reminded_year=year)
+    )
+    await session.commit()

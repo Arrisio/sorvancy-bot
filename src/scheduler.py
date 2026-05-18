@@ -206,3 +206,49 @@ async def _run_birthday_reminders(bot) -> None:
 
         except Exception:
             logger.exception("Birthday reminder failed for child %s", child.id)
+
+    async with get_session_factory()() as session:
+        customers = await customer_model.get_customers_for_birthday_reminder(
+            session, target.month, target.day
+        )
+
+    for cust in customers:
+        if cust.max_user_id is None:
+            continue
+
+        if cust.birthday_reminded_year == target_year:
+            continue
+
+        try:
+            async with get_session_factory()() as session:
+                async with session.begin():
+                    cfg = await financial_config_model.get_or_create(session)
+                    coupon = await coupon_model.create_birthday_coupon(
+                        session,
+                        customer_id=cust.id,
+                        value=cfg.birthday_coupon_value,
+                        valid_days=cfg.birthday_coupon_valid_days,
+                        max_payment_pct=cfg.birthday_coupon_max_pct,
+                    )
+                    await customer_model.set_birthday_reminded_year(session, cust.id, target_year)
+
+            valid_until_str = coupon.valid_until.astimezone(_PERM_TZ).strftime("%d.%m.%Y")
+            if cust.first_name:
+                text = (
+                    f"🎂 {cust.first_name}, через три дня — ваш день рождения!\n\n"
+                    f"Сорванцы поздравляют вас заранее и дарят купон на {coupon.value} ₽.\n"
+                    f"Действителен до {valid_until_str}.\n\n"
+                    f"С наступающим! 🥳"
+                )
+            else:
+                text = (
+                    f"🎂 Через три дня — ваш день рождения!\n\n"
+                    f"Сорванцы поздравляют вас заранее и дарят купон на {coupon.value} ₽.\n"
+                    f"Действителен до {valid_until_str}.\n\n"
+                    f"С наступающим! 🥳"
+                )
+
+            await bot.send_message(user_id=cust.max_user_id, text=text)
+
+        except Exception:
+            logger.exception("Birthday reminder failed for customer %s", cust.id)

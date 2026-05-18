@@ -30,6 +30,7 @@ class Customer(Base):
     registered_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default="NOW()", nullable=False
     )
+    birthday_reminded_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     opt_out_marketing: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
     )
