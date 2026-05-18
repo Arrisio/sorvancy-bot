@@ -165,7 +165,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         await context.set_state(StaffState.AWAITING_COUPON_PCT)
         sent = await bot.send_message(
             user_id=user_id,
-            text="Максимальный процент от покупки, который можно оплатить купоном (1–100):",
+            text="Введите % суммы покупки, которые можно оплатить купоном (до 30%):",
             attachments=[cancel_keyboard("coupon:issue_cancel")],
         )
         if coupon_ctx == "broadcast":
@@ -178,8 +178,8 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         except ValueError:
             await bot.send_message(user_id=user_id, text="Введите целое число.")
             return
-        if pct < 1 or pct > 100:
-            await bot.send_message(user_id=user_id, text="Введите число от 1 до 100.")
+        if pct < 1 or pct > 30:
+            await bot.send_message(user_id=user_id, text="Введите процент от 1 до 30.")
             return
         data = await context.get_data()
         coupon_ctx = data.get("coupon_context", "seller")

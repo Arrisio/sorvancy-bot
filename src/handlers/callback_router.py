@@ -212,10 +212,15 @@ async def _handle_staff_callback(event, context, staff, state, payload, user_id)
             return
         name = " ".join(filter(None, [cust.first_name or "", cust.last_name or ""])) or str(customer_id)
         await context.update_data(coupon_target_customer_id=customer_id)
+        await bot.send_message(
+            user_id=user_id,
+            text=f"Выдаёте купон клиенту {name}.",
+            attachments=[cancel_keyboard("coupon:issue_cancel")],
+        )
         await context.set_state(StaffState.AWAITING_COUPON_VALUE)
         await bot.send_message(
             user_id=user_id,
-            text=f"Выдаёте купон клиенту {name}. Введите максимальную сумму купона (в рублях, 101–1000):",
+            text="Введите максимальную сумму купона (в рублях, 101–1000):",
             attachments=[cancel_keyboard("coupon:issue_cancel")],
         )
         return

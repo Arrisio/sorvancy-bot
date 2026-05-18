@@ -20,8 +20,8 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 2. Operator types integer 101–1000 → `coupon_draft.value`.
 3. Bot sends: «Срок действия купона (в днях, минимум 7):» + button [Отмена]
 4. Operator types integer ≥ 7 → `coupon_draft.validity_days`.
-5. Bot sends: «Максимальный процент от покупки, который можно оплатить купоном (1–100):» + button [Отмена]
-6. Operator types integer 1–100 → `coupon_draft.max_payment_pct`.
+5. Bot sends: «Введите % суммы покупки, которые можно оплатить купоном (до 30%):» + button [Отмена]
+6. Operator types integer 1–30 → `coupon_draft.max_payment_pct`.
 7. Sub-scenario returns `coupon_draft` to parent.
 
 ## Alternative flows
@@ -43,8 +43,8 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 - Bot: «Срок должен быть не менее 7 дней.»
 - Operator retries step 4.
 
-### N4: `max_payment_pct` out of range (<1 or >100)
-- Bot: «Введите процент от 1 до 100.»
+### N4: `max_payment_pct` out of range (<1 or >30)
+- Bot: «Введите процент от 1 до 30.»
 - Operator retries step 6.
 
 ## Postconditions
@@ -52,4 +52,4 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 - No DB writes performed by this sub-scenario.
 
 ## Open questions
-- [ ] N4 absent from current scenario 15 implementation — confirm `max_payment_pct` range validation should be added (entity invariant requires 1–100).
+- [x] N4 absent from current scenario 15 implementation — `max_payment_pct` range validation added; UI cap set to 30 (entity allows 1–100, operator input capped at 30). RESOLVED.
