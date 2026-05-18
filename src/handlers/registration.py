@@ -113,6 +113,6 @@ async def register_registration_handlers(dp):
                 text=survey_offer_message(),
                 attachments=[survey_offer_keyboard()],
             )
-            await context.update_data(survey_offer_mid=sended.message.mid)
+            await context.update_data(survey_offer_mid=sended.message.body.mid)
         except Exception:
             logger.debug("Could not store survey offer message id")

@@ -762,6 +762,8 @@ async def on_unknown(event: MessageCallback) -> None:
 # Закрепить сообщение (reply-контекст)
 linked = event.message.link
 if linked:
+    # linked.message — это MessageBody (не Message!), поэтому .mid здесь есть.
+    # Для SendedMessage (возврат send_message/answer) — только sent.message.body.mid, НЕ sent.message.mid
     await bot.pin_message(chat_id=chat_id, message_id=linked.message.mid)
 
 # Удалить сообщение
@@ -816,7 +818,7 @@ chat_id = event.message.recipient.chat_id
 # Linked message (сообщение, на которое ответили)
 linked = event.message.link
 if linked:
-    mid = linked.message.mid  # ID сообщения
+    mid = linked.message.mid  # Link.message — это MessageBody, не Message; поэтому .mid здесь есть
 
 # full_name отправителя
 full_name = event.message.sender.full_name

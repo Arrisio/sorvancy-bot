@@ -103,7 +103,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 ),
                 attachments=[broadcast_start_keyboard()],
             )
-            await _append_step_mid(context, sent.message.mid)
+            await _append_step_mid(context, sent.message.body.mid)
             return
 
         if state == StaffState.AWAITING_BROADCAST_TIME:
@@ -147,7 +147,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             attachments=[cancel_keyboard("coupon:issue_cancel")],
         )
         if coupon_ctx == "broadcast":
-            await _append_step_mid(context, sent.message.mid)
+            await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == StaffState.AWAITING_COUPON_DAYS:
@@ -169,7 +169,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             attachments=[cancel_keyboard("coupon:issue_cancel")],
         )
         if coupon_ctx == "broadcast":
-            await _append_step_mid(context, sent.message.mid)
+            await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == StaffState.AWAITING_COUPON_PCT:
@@ -302,7 +302,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                  "Можно пропустить 😊",
             attachments=[back_and_skip_keyboard()],
         )
-        await _append_step_mid(context, sent.message.mid)
+        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_LAST_NAME:
@@ -314,7 +314,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
             text="Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
             attachments=[back_and_skip_keyboard()],
         )
-        await _append_step_mid(context, sent.message.mid)
+        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
@@ -325,7 +325,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                 text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
                 attachments=[back_and_skip_keyboard()],
             )
-            await _append_step_mid(context, sent.message.mid)
+            await _append_step_mid(context, sent.message.body.mid)
             return
         await context.update_data(**{"draft.birthdate": str(bd)})
         data = await context.get_data()
@@ -344,7 +344,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                 text="Как зовут следующего ребёнка?",
                 attachments=[back_keyboard()],
             )
-        await _append_step_mid(context, sent.message.mid)
+        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_CHILD_NAME:
@@ -361,7 +361,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                  "Подберём подходящие предложения:",
             attachments=[gender_keyboard()],
         )
-        await _append_step_mid(context, sent.message.mid)
+        await _append_step_mid(context, sent.message.body.mid)
         return
 
     if state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
@@ -372,7 +372,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                 text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
                 attachments=[back_and_skip_keyboard()],
             )
-            await _append_step_mid(context, sent.message.mid)
+            await _append_step_mid(context, sent.message.body.mid)
             return
         data = await context.get_data()
         children = data.get("draft.children", [])
@@ -387,7 +387,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
             text=f"Ребёнок {n} · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?",
             attachments=[yes_no_keyboard("more_children:yes", "more_children:no")],
         )
-        await _append_step_mid(context, sent.message.mid)
+        await _append_step_mid(context, sent.message.body.mid)
         return
 
     # Survey confirmation card inline edit

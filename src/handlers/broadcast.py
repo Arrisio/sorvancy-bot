@@ -102,7 +102,7 @@ async def register_broadcast_handlers(dp):
             "Пришлите сообщение для рассылки",
             attachments=[cancel_keyboard("broadcast:cancel_create")],
         )
-        await _append_step_mid(context, sent.message.mid)
+        await _append_step_mid(context, sent.message.body.mid)
 
     @dp.message_created(F.message.body.text == BROADCAST_LIST_BTN_TEXT)
     async def on_broadcast_list(
@@ -140,7 +140,7 @@ async def _save_broadcast_source(event, context) -> None:
         text="Добавить купон к рассылке?",
         attachments=[broadcast_coupon_choice_keyboard()],
     )
-    await _append_step_mid(context, sent.message.mid)
+    await _append_step_mid(context, sent.message.body.mid)
 
 
 async def _ask_broadcast_recipients(bot, user_id: int, context) -> None:
@@ -150,7 +150,7 @@ async def _ask_broadcast_recipients(bot, user_id: int, context) -> None:
         text="Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
         attachments=[cancel_keyboard("broadcast:cancel_create")],
     )
-    await _append_step_mid(context, sent.message.mid)
+    await _append_step_mid(context, sent.message.body.mid)
 
 
 async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
