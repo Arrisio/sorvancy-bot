@@ -210,7 +210,7 @@ async def _send_discount_qr(bot, user_id: int):
         f"Номер клиента: {customer.id}\n"
         f"Скидка: {customer.discount_percent}%\n"
         f"{coupon_block}\n"
-        f"Ссылка для продавца:\n{link}"
+        f"Если QR не считывается — отправьте ссылку:\n{link}"
     )
     try:
         qr_bytes = make_qr_png(customer.id)
