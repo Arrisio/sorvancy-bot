@@ -16,10 +16,13 @@ Project specs live in `specs/`. Read relevant specs before implementing features
 ```
 specs/
 ├── glossary.md          # domain terms
+├── ux-style-guide.md    # UX rules: message lifecycle, keyboards, FSM flows, errors
 ├── entities/            # data model specs (customer, child, discount)
 ├── scenarios/           # user-facing behavior specs
 └── nfr/                 # non-functional requirements
 ```
+
+Read `specs/ux-style-guide.md` before writing scenario specs or implementing handlers. It defines when to send / edit / delete messages, keyboard restore rules, FSM multi-step patterns, validation UX, and button idempotency.
 
 To generate or update specs from a natural language description, use `/spec-analyst`.
 
