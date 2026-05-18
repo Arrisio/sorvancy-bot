@@ -23,7 +23,7 @@ Daily scheduled job fires.
 3. Skip child if `birthday_reminded_year = year_of(today + 3 days)` — already reminded this year
 4. For each remaining child: load parent Customer
 5. Decline child's name to Russian genitive case (e.g. «Маша» → «Маши», «Дима» → «Димы»); uses Russian morphology library (pymorphy2 or equivalent)
-6. Issue coupon to Customer: type=`birthday`, value=`FinancialConfig.birthday_coupon_value`, max_payment_pct=`FinancialConfig.birthday_coupon_max_pct`, valid_until=now()+`FinancialConfig.birthday_coupon_valid_days` days
+6. Issue coupon to Customer: type=`birthday`, value=`FinancialConfig.birthday_coupon_value`, max_payment_pct=`FinancialConfig.birthday_coupon_max_pct`, valid_until=now()+`FinancialConfig.birthday_coupon_valid_days` days, display_name=`"ДР: {value} ₽ до {ДД.ММ.ГГ}"`
 7. Send message to Customer:
    «У [имя в родительном падеже] через три дня день рождения. Вот вам купон на скидку — [birthday_coupon_value] руб., действителен до [дата].»
 8. Set Child.birthday_reminded_year = year_of(today + 3 days)

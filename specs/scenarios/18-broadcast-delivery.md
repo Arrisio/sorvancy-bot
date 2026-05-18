@@ -20,7 +20,7 @@ Hourly scheduled job fires. Also fires immediately when Broadcast.status is set 
 3. For each Broadcast with status=`running`: query BroadcastRecipients where status=`pending`
 4. For each pending recipient:
    a. Forward `source_message_id` from `source_chat_id` to recipient's `max_user_id`
-   b. If Broadcast has coupon template (`coupon_value IS NOT NULL`): create Coupon for customer (`type=broadcast`, `value=coupon_value`, `max_payment_pct=coupon_max_payment_pct`, `valid_until = delivery_time + coupon_validity_days days`); send customer coupon notification (see Notification section)
+   b. If Broadcast has coupon template (`coupon_value IS NOT NULL`): create Coupon for customer (`type=broadcast`, `value=coupon_value`, `max_payment_pct=coupon_max_payment_pct`, `valid_until = delivery_time + coupon_validity_days days`, `display_name = Broadcast.coupon_display_name`); send customer coupon notification (see Notification section)
 5. On successful forward (and coupon creation if applicable): mark BroadcastRecipient status=`sent`, sent_at=now()
 6. On failed forward: mark BroadcastRecipient status=`failed`, store error text; skip coupon creation; continue to next recipient
 7. After all recipients of a Broadcast are processed (no `pending` remain): set Broadcast status=`completed`; update `sent_count`, `failed_count`

@@ -21,7 +21,7 @@ Bot records message ID of each prompt in `step_mids` (MemoryContext); all delete
 2. Bot sends: «Пришлите сообщение для рассылки» + button [Отмена]
 3. Superuser sends message with broadcast content — any message type is accepted: text, photo, file, video, audio, sticker, or any other supported attachment; the original message is saved by reference
 4. Bot saves reference to original message (will be forwarded to each recipient via Forward — not re-sent as new message; attachments preserved automatically); sends: «Добавить купон к рассылке?» + buttons [Добавить] [Пропустить]
-   - Superuser clicks [Добавить] → Bot runs sub-scenario 21 (Coupon Input); stores `coupon_draft` in broadcast context; proceeds to step 5.
+   - Superuser clicks [Добавить] → Bot runs sub-scenario 21 (Coupon Input); stores `coupon_draft = {value, validity_days, max_payment_pct, display_name}` in broadcast context; proceeds to step 5.
    - Superuser clicks [Пропустить] → proceeds to step 5 with no coupon attached.
 5. Bot sends: «Пришлите номера клиентов для рассылки» + button [Отмена]
 6. Superuser sends recipient list as text — Customer IDs separated by any delimiter (whitespace, comma, semicolon); parsed by same shared utility as birthdate input (`_parse_date` pattern — split on any non-digit)

@@ -45,5 +45,5 @@ Each coupon button triggers scenario 08. "Изменить % скидки" trigg
 ## Open questions
 - [ ] Auth check: profile shown only to registered Staff, or any user who follows deeplink?
 - [ ] Customer has zero active coupons: show «Нет активных купонов» or omit coupon section?
-- [ ] Coupon button label: exact format? (e.g., «Купон 300 ₽» or «Купон "anket"»?)
+- [x] Coupon button label: `Coupon.display_name` (e.g. «Бонус 300 ₽ до 25.06.26»). RESOLVED.
 - [ ] Profile message format: exact layout TBD — confirm fields shown (first_name + last_name + discount_percent + coupons cover all cases?)

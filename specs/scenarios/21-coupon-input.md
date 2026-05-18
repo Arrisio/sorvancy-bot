@@ -22,7 +22,10 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 4. Operator types integer ≥ 7 → `coupon_draft.validity_days`.
 5. Bot sends: «Введите % суммы покупки, которые можно оплатить купоном (до 30%):» + button [Отмена]
 6. Operator types integer 1–30 → `coupon_draft.max_payment_pct`.
-7. Sub-scenario returns `coupon_draft` to parent.
+7. Bot computes suggested default display name: `"{value} ₽ до {ДД.ММ.ГГ}"` where date = today + `validity_days`.
+   Bot sends: «Название купона в кнопке (видит покупатель, макс. 40 символов). Предложение: «{suggested}». Введите своё или примите предложенное.» + buttons [Принять] [Отмена]
+8. Operator clicks [Принять] → `coupon_draft.display_name = suggested`; OR operator types text (≤ 40 chars) → `coupon_draft.display_name = typed_text`.
+9. Sub-scenario returns `coupon_draft` to parent.
 
 ## Alternative flows
 
@@ -47,8 +50,12 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 - Bot: «Введите процент от 1 до 30.»
 - Operator retries step 6.
 
+### N5: `display_name` exceeds 40 chars
+- Bot: «Название не должно превышать 40 символов. Введите короче или нажмите [Принять] для использования предложенного.»
+- Operator retries step 8.
+
 ## Postconditions
-- `coupon_draft = {value, validity_days, max_payment_pct}` returned to parent scenario.
+- `coupon_draft = {value, validity_days, max_payment_pct, display_name}` returned to parent scenario.
 - No DB writes performed by this sub-scenario.
 
 ## Open questions

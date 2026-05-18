@@ -13,7 +13,7 @@
 | Phase 1 | Minimal registration: Customer row created with max_user_id + discount_percent only. |
 | Phase 2 | Survey: enriches Customer with first_name, birthdate; creates Child rows. |
 | Cashier | Store staff who reads discount QR or text card from customer's phone screen. |
-| Coupon | Single-use monetary benefit issued to a Customer. Covers part of purchase up to `value` rubles and `max_payment_pct`% of total. Expires at `valid_until`. |
+| Coupon | Single-use monetary benefit issued to a Customer. Covers part of purchase up to `value` rubles and `max_payment_pct`% of total. Expires at `valid_until`. `display_name` (≤40 chars) is the label shown on coupon buttons and lists. |
 | registered_keyboard | Persistent keyboard for registered Customer. Button routing: `specs/ux-style-guide.md` §2.1. |
 | unregistered_keyboard | Button set for new users: «Зарегистрироваться и получить скидку». |
 | registered_keyboard_with_contact | Keyboard shown in scenario 01 step 6 immediately after registration. Same buttons as `registered_keyboard` (customer keyboard). |

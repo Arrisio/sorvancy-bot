@@ -19,6 +19,7 @@ Mass message forwarded to a filtered set of customers; may be immediate or sched
 | coupon_value | int | nullable | Coupon template: whole rubles; null means no coupon attached |
 | coupon_validity_days | int | nullable | Coupon template: days from delivery time until expiry |
 | coupon_max_payment_pct | int | nullable | Coupon template: max % of purchase coverable by coupon (1–100) |
+| coupon_display_name | text | nullable, max 40 chars | Coupon template: display_name stamped on each issued Coupon at delivery |
 
 ## Invariants
 
@@ -26,7 +27,7 @@ Mass message forwarded to a filtered set of customers; may be immediate or sched
 - Status transitions: `pending` → `running` → `completed` | `cancelled`
 - `cancelled` set by superuser via scenario 12 or [Отмена] at scheduling step in scenario 11
 - `sent_count + failed_count ≤ recipient_count`
-- Coupon template fields are all-or-nothing: either all three (`coupon_value`, `coupon_validity_days`, `coupon_max_payment_pct`) are set, or all are null
+- Coupon template fields are all-or-nothing: either all four (`coupon_value`, `coupon_validity_days`, `coupon_max_payment_pct`, `coupon_display_name`) are set, or all are null
 
 ## Relations
 

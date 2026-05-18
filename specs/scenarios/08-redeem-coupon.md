@@ -42,4 +42,4 @@ Seller clicks coupon button on customer profile message (scenario 06).
 - Seller received updated customer profile
 
 ## Open questions
-- [ ] "Coupon name" in notification messages: `type` field used as display name — confirm this is acceptable or separate `name` field needed.
+- [x] "Coupon name" in notification messages: `Coupon.display_name` field. RESOLVED — see entity spec.

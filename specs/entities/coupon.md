@@ -9,7 +9,8 @@ Single-use discount coupon issued to a customer as a benefit; lets customer pay 
 |-------|------|-------------|-------|
 | id | bigint | PK, auto | Internal ID |
 | customer_id | bigint | not null, FK → customers(id) | Coupon owner |
-| type | text | not null | Issuance reason, e.g. `survey_completed` |
+| type | text | not null | Issuance reason: `anket` \| `seller` \| `birthday` \| `broadcast` |
+| display_name | text | not null, max 40 chars | Label shown on coupon buttons and in coupon lists. Set at issuance; not editable after creation. |
 | value | integer | not null | Whole rubles deductible from purchase |
 | max_payment_pct | integer | not null | Max % of purchase total that coupon may cover (1–100) |
 | valid_until | timestamptz | not null | Coupon expires at this moment |
@@ -23,12 +24,24 @@ Single-use discount coupon issued to a customer as a benefit; lets customer pay 
 - Coupon applied to purchase: amount deducted ≤ `value` AND amount deducted ≤ `purchase_total * max_payment_pct / 100`
 - Expired coupon (`valid_until ≤ now()`) must not be accepted even if status not yet flipped
 - `value > 0`, `max_payment_pct` in [1, 100]
+- `display_name` length 1–40 chars; set at creation; immutable thereafter
 - Scheduled job flips `status → expired` where `valid_until ≤ now()` AND `status = active`
 - Customer may hold multiple active coupons simultaneously
 - Multiple coupons may be applied to one purchase (stacking allowed)
 - Coupon issued automatically when Customer.survey_completed transitions False → True (`type = anket`)
 - Coupon issued manually by seller (`type = seller`)
 - Coupon issued to each successfully reached recipient of a coupon broadcast (`type = broadcast`); `valid_until = delivery_time + validity_days`
+
+## Display name defaults
+
+Auto-generated defaults per type (date format `ДД.ММ.ГГ`, 2-digit year for button compactness):
+
+| Type | Default display_name | Rationale |
+|------|---------------------|-----------|
+| `anket` | `Бонус {value} ₽ до {ДД.ММ.ГГ}` | "Бонус" signals reward, reinforces behavior loop; customer recalls why they have it → higher redemption |
+| `birthday` | `ДР: {value} ₽ до {ДД.ММ.ГГ}` | "ДР:" instantly identifies birthday origin; separates from other coupons in list |
+| `seller` | `{value} ₽ до {ДД.ММ.ГГ}` | Generic transactional; operator may override (scenario 21, last step) |
+| `broadcast` | `{value} ₽ до {ДД.ММ.ГГ}` | Generic promotional; operator may override (scenario 21, last step) |
 
 ## Relations
 
