@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 _morph = pymorphy3.MorphAnalyzer()
 
 BROADCAST_DELIVERY_INTERVAL = 3600  # seconds
-BIRTHDAY_CHECK_INTERVAL = 86400     # seconds
 COUPON_EXPIRY_INTERVAL = 86400      # seconds
 
 
@@ -147,11 +146,17 @@ async def coupon_expiry_loop() -> None:
 
 async def birthday_reminder_loop(bot) -> None:
     while True:
+        now = datetime.now(_PERM_TZ)
+        target = now.replace(
+            hour=config.BROADCAST_WINDOW_START_HOUR, minute=0, second=0, microsecond=0
+        )
+        if now >= target:
+            target += timedelta(days=1)
+        await asyncio.sleep((target - now).total_seconds())
         try:
             await _run_birthday_reminders(bot)
         except Exception:
             logger.exception("birthday_reminder_loop error")
-        await asyncio.sleep(BIRTHDAY_CHECK_INTERVAL)
 
 
 async def _run_birthday_reminders(bot) -> None:

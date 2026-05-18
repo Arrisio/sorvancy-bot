@@ -8,7 +8,7 @@ Bot sends birthday reminder to Customer 3 days before a birthday (child's or cus
 - Customer (notification recipient)
 
 ## Trigger
-Daily scheduled job fires.
+Daily scheduled job fires at `BROADCAST_WINDOW_START_HOUR` (default 10:00) Yekaterinburg time (`Asia/Yekaterinburg`). Bot calculates sleep until next occurrence of that hour on startup.
 
 ---
 
