@@ -28,7 +28,7 @@ User clicks «🎁 Скидка и купоны» button.
    🎁 {coupon.display_name}
    …
 
-   Ссылка для продавца:
+   Если QR не считывается — отправьте ссылку:
    {deeplink_url}
    ```
    Coupon section omitted if no active coupons. If >20 coupons, show first 20, append «…и ещё N» (style guide §8).
@@ -48,5 +48,4 @@ User clicks «🎁 Скидка и купоны» button.
 - `Customer.last_touch` set to current datetime
 
 ## Open questions
-- [ ] Link label text: «Ссылка для продавца:» confirmed? Or different wording?
-- [ ] Code: `DISCOUNT_BTN_TEXT` constant and «Скидка» label must be updated to «🎁 Скидка и купоны» to match this spec.
+_All resolved._
