@@ -20,7 +20,7 @@ Kid belonging to Customer. Collected during survey. Drives birthday and school-y
 - gender must be 'male' or 'female' (enforced by DB CHECK constraint `gender_check`)
 - Child record created only at survey step 10 (single DB transaction) — not at step 6 or 7; all child data lives in `draft.children` MemoryContext until then
 - name, gender, birthdate all stored in draft between steps 5–7; no partial DB writes mid-survey
-- 0 children per Customer is valid when «Купить для себя» path taken
+- 0 children per Customer is valid when «Покупаю для себя» path taken
 - Deleted cascading when Customer removed
 
 ## Relations

@@ -31,7 +31,7 @@ Bot records message ID of each question in `step_mids` (MemoryContext) as steps 
 | 1 | REGISTERED | Delete survey offer message. Set AWAITING_NAME. «Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:» + [Отмена] | Types name or clicks Отмена |
 | 2 | AWAITING_NAME | Store `draft.first_name`. Set AWAITING_LAST_NAME. «Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. Можно пропустить 😊» + [Пропустить] [← Назад] | Types or skips |
 | 3 | AWAITING_LAST_NAME | Store `draft.last_name` (null if skipped). Set AWAITING_CUSTOMER_BIRTHDATE. «Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
-| 4 | AWAITING_CUSTOMER_BIRTHDATE | Store `draft.birthdate` (null if skipped). Set AWAITING_CHILD_NAME. «Шаг 4 из 4 · Как зовут вашего ребёнка?» + (if 0 children in draft: [Купить для себя]) + [← Назад] | Types name or clicks Купить для себя |
+| 4 | AWAITING_CUSTOMER_BIRTHDATE | Store `draft.birthdate` (null if skipped). Set AWAITING_CHILD_NAME. «Шаг 4 из 4 · Как зовут вашего ребёнка?» + (if 0 children in draft: [Покупаю для себя]) + [← Назад] | Types name or clicks Покупаю для себя |
 | 5 | AWAITING_CHILD_NAME | Append child draft entry `{name}`. Set AWAITING_CHILD_GENDER. «Ребёнок N · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? Подберём подходящие предложения:» + [Мальчик] [Девочка] [← Назад] | Clicks button |
 | 6 | AWAITING_CHILD_GENDER | Store `gender` into current child draft. Set AWAITING_CHILD_BIRTHDATE. «Ребёнок N · шаг 2 из 3 · Когда день рождения у ребёнка? Будем поздравлять! 🎉 (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
 | 7 | AWAITING_CHILD_BIRTHDATE | Store `birthdate` into current child draft (null if skipped). Set AWAITING_MORE_CHILDREN. «Ребёнок N · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?» + [Да] [Нет] | Clicks button |
@@ -160,7 +160,7 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 - [▶️ Продолжить] → set FSM to state stored in `survey_draft`, resume from that step
 - [🔄 Начать заново] → clear draft, clear `customer.survey_draft`, set AWAITING_NAME, go to step 1
 
-### A3: «Купить для себя» (step 4, 0 children in draft)
+### A3: «Покупаю для себя» (step 4, 0 children in draft)
 - Append `draft.bought_for_self = true`
 - Skip steps 5–8; set AWAITING_CONFIRMATION
 - Confirmation card shows no children section
@@ -179,7 +179,7 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 | `draft.first_name` | Q1 answer |
 | `draft.last_name` | Q2 answer (null if skipped) |
 | `draft.birthdate` | Q3 answer (null if skipped) |
-| `draft.bought_for_self` | True if «Купить для себя» taken |
+| `draft.bought_for_self` | True if «Покупаю для себя» taken |
 | `draft.children` | List of `{name, gender, birthdate}` dicts |
 | `draft.current_child_index` | 1-based index of child being filled |
 | `draft.editing_field` | Field being edited from confirmation card (cleared after update) |

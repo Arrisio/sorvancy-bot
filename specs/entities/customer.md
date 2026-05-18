@@ -14,7 +14,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 | last_name | varchar(255) | nullable | Collected in survey Q2 (optional; null if skipped) |
 | phone | varchar(20) | nullable | Collected in survey contact step (optional; null if not shared) |
 | birthdate | date | nullable | Collected in survey Q3 (optional; null if skipped) |
-| survey_completed | boolean | not null, default false | True when «Купить для себя» taken, OR ≥1 child has birthdate NOT NULL at survey finish |
+| survey_completed | boolean | not null, default false | True when «Покупаю для себя» taken, OR ≥1 child has birthdate NOT NULL at survey finish |
 | discount_percent | int | not null, default 10 | Set from `config.DISCOUNT_PERCENT` at creation |
 | registered_at | timestamptz | not null, default now() | Phase 1 completion time |
 | opt_out_marketing | boolean | not null, default false | Customer opted out of personal offers; excludes from all Broadcast recipient lists |
@@ -33,7 +33,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 
 ## Survey completion signal
 
-Explicit boolean flag `survey_completed`. Set to true at end of scenario 02 if: «Купить для себя» path was taken, OR ≥1 child has `birthdate NOT NULL`. False otherwise. Coupon issued only on False → True transition.
+Explicit boolean flag `survey_completed`. Set to true at end of scenario 02 if: «Покупаю для себя» path was taken, OR ≥1 child has `birthdate NOT NULL`. False otherwise. Coupon issued only on False → True transition.
 
 ## Relations
 
