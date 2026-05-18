@@ -37,6 +37,9 @@ from src.keyboards import (
     broadcast_start_keyboard,
     child_card_keyboard,
     coupon_display_name_keyboard,
+    coupon_value_keyboard,
+    coupon_days_keyboard,
+    coupon_pct_keyboard,
 )
 import config
 from src.handlers.registration import _format_confirmation, _parse_date, _parse_int_list
@@ -51,6 +54,57 @@ from src.handlers.financial_settings import (
 from src.services.discount import coupon_issued_notification
 
 logger = logging.getLogger(__name__)
+
+
+async def _do_coupon_value_accepted(bot, user_id: int, context, val: int) -> None:
+    data = await context.get_data()
+    coupon_ctx = data.get("coupon_context", "seller")
+    await context.update_data(coupon_draft_value=val)
+    await context.set_state(StaffState.AWAITING_COUPON_DAYS)
+    sent = await bot.send_message(
+        user_id=user_id,
+        text="Срок действия купона (в днях, минимум 7):",
+        attachments=[coupon_days_keyboard()],
+    )
+    if coupon_ctx == "broadcast":
+        await _append_step_mid(context, sent.message.body.mid)
+
+
+async def _do_coupon_days_accepted(bot, user_id: int, context, days: int) -> None:
+    data = await context.get_data()
+    coupon_ctx = data.get("coupon_context", "seller")
+    await context.update_data(coupon_draft_days=days)
+    await context.set_state(StaffState.AWAITING_COUPON_PCT)
+    sent = await bot.send_message(
+        user_id=user_id,
+        text="Введите % суммы покупки, которые можно оплатить купоном (1–100%):",
+        attachments=[coupon_pct_keyboard()],
+    )
+    if coupon_ctx == "broadcast":
+        await _append_step_mid(context, sent.message.body.mid)
+
+
+async def _do_coupon_pct_accepted(bot, user_id: int, context, pct: int) -> None:
+    data = await context.get_data()
+    coupon_ctx = data.get("coupon_context", "seller")
+    value = data.get("coupon_draft_value")
+    days = data.get("coupon_draft_days")
+    await context.update_data(coupon_draft_pct=pct)
+    expiry = datetime.now(timezone.utc) + timedelta(days=days)
+    suggested = f"{value} ₽ до {expiry.strftime('%d.%m.%y')}"
+    await context.update_data(coupon_draft_suggested_display_name=suggested)
+    await context.set_state(StaffState.AWAITING_COUPON_DISPLAY_NAME)
+    sent = await bot.send_message(
+        user_id=user_id,
+        text=(
+            f"Название купона в кнопке (видит покупатель, макс. 40 символов).\n"
+            f"Предложение: «{suggested}».\n"
+            "Введите своё или нажмите «Принять»."
+        ),
+        attachments=[coupon_display_name_keyboard()],
+    )
+    if coupon_ctx == "broadcast":
+        await _append_step_mid(context, sent.message.body.mid)
 
 
 async def _apply_coupon_display_name(bot, user_id: int, context, display_name: str) -> None:
@@ -264,7 +318,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             await bot.send_message(user_id=user_id, text=card_text, attachments=[keyboard])
         return
 
-    # Scenario 15 Flow B: coupon issuance
+    # Scenario 15 Flow B / sub-scenario 21: coupon issuance
     if state == StaffState.AWAITING_COUPON_VALUE:
         try:
             val = int(text)
@@ -272,27 +326,17 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             await bot.send_message(
                 user_id=user_id,
                 text="Введите целое число.",
-                attachments=[cancel_keyboard("coupon:issue_cancel")],
+                attachments=[coupon_value_keyboard()],
             )
             return
-        if val < 101 or val > 1000:
+        if val < 100 or val > 5000:
             await bot.send_message(
                 user_id=user_id,
-                text="Введите сумму от 101 до 1000 рублей.",
-                attachments=[cancel_keyboard("coupon:issue_cancel")],
+                text="Введите сумму от 100 до 5000 рублей.",
+                attachments=[coupon_value_keyboard()],
             )
             return
-        data = await context.get_data()
-        coupon_ctx = data.get("coupon_context", "seller")
-        await context.update_data(coupon_draft_value=val)
-        await context.set_state(StaffState.AWAITING_COUPON_DAYS)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text="Срок действия купона (в днях, минимум 7):",
-            attachments=[cancel_keyboard("coupon:issue_cancel")],
-        )
-        if coupon_ctx == "broadcast":
-            await _append_step_mid(context, sent.message.body.mid)
+        await _do_coupon_value_accepted(bot, user_id, context, val)
         return
 
     if state == StaffState.AWAITING_COUPON_DAYS:
@@ -302,27 +346,17 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             await bot.send_message(
                 user_id=user_id,
                 text="Введите целое число.",
-                attachments=[cancel_keyboard("coupon:issue_cancel")],
+                attachments=[coupon_days_keyboard()],
             )
             return
         if days < 7:
             await bot.send_message(
                 user_id=user_id,
                 text="Срок должен быть не менее 7 дней.",
-                attachments=[cancel_keyboard("coupon:issue_cancel")],
+                attachments=[coupon_days_keyboard()],
             )
             return
-        data = await context.get_data()
-        coupon_ctx = data.get("coupon_context", "seller")
-        await context.update_data(coupon_draft_days=days)
-        await context.set_state(StaffState.AWAITING_COUPON_PCT)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text="Введите % суммы покупки, которые можно оплатить купоном (до 30%):",
-            attachments=[cancel_keyboard("coupon:issue_cancel")],
-        )
-        if coupon_ctx == "broadcast":
-            await _append_step_mid(context, sent.message.body.mid)
+        await _do_coupon_days_accepted(bot, user_id, context, days)
         return
 
     if state == StaffState.AWAITING_COUPON_PCT:
@@ -332,36 +366,17 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             await bot.send_message(
                 user_id=user_id,
                 text="Введите целое число.",
-                attachments=[cancel_keyboard("coupon:issue_cancel")],
+                attachments=[coupon_pct_keyboard()],
             )
             return
-        if pct < 1 or pct > 30:
+        if pct < 1 or pct > 100:
             await bot.send_message(
                 user_id=user_id,
-                text="Введите процент от 1 до 30.",
-                attachments=[cancel_keyboard("coupon:issue_cancel")],
+                text="Введите процент от 1 до 100.",
+                attachments=[coupon_pct_keyboard()],
             )
             return
-        data = await context.get_data()
-        coupon_ctx = data.get("coupon_context", "seller")
-        value = data.get("coupon_draft_value")
-        days = data.get("coupon_draft_days")
-        await context.update_data(coupon_draft_pct=pct)
-        expiry = datetime.now(timezone.utc) + timedelta(days=days)
-        suggested = f"{value} ₽ до {expiry.strftime('%d.%m.%y')}"
-        await context.update_data(coupon_draft_suggested_display_name=suggested)
-        await context.set_state(StaffState.AWAITING_COUPON_DISPLAY_NAME)
-        sent = await bot.send_message(
-            user_id=user_id,
-            text=(
-                f"Название купона в кнопке (видит покупатель, макс. 40 символов).\n"
-                f"Предложение: «{suggested}».\n"
-                "Введите своё или нажмите «Принять»."
-            ),
-            attachments=[coupon_display_name_keyboard()],
-        )
-        if coupon_ctx == "broadcast":
-            await _append_step_mid(context, sent.message.body.mid)
+        await _do_coupon_pct_accepted(bot, user_id, context, pct)
         return
 
     if state == StaffState.AWAITING_COUPON_DISPLAY_NAME:

@@ -20,6 +20,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 | opt_out_marketing | boolean | not null, default false | Customer opted out of personal offers; excludes from all Broadcast recipient lists |
 | survey_draft | jsonb | nullable | Full survey context snapshot: FSM state + all `draft.*` keys; written at each step; null when not mid-survey |
 | last_touch | timestamptz | nullable | Set to now() when Customer clicks «Показать QR-код» (scenario 03) or «Связаться с продавцом» (scenario 17); null if neither action ever taken |
+| birthday_reminded_year | int | nullable | Year of last own-birthday reminder sent (scenario 19 Flow B); null = never reminded |
 
 ## Invariants
 
@@ -30,6 +31,7 @@ Registered store buyer. Created minimally on first interaction; enriched via opt
 - first_name, last_name, birthdate, phone: null until survey step populates them
 - survey_draft: populated at each survey step with full context (FSM state + collected data); null means survey not started or was cancelled; cleared on completion or cancellation
 - last_touch: updated on every trigger action (QR view, contact seller); not cleared; null only if Customer has never triggered either action
+- birthday_reminded_year: set to year_of(today + 3 days) at reminder send time; null until first reminder fires
 
 ## Survey completion signal
 
@@ -44,3 +46,4 @@ Explicit boolean flag `survey_completed`. Set to true at end of scenario 02 if: 
 - [ ] Survey message says "скидка увеличена" after completion — discount_percent not actually increased in code. Intentional or bug? Decide and fix.
 - [ ] `survey_completed` flag not yet in DB schema (code uses `first_name IS NOT NULL` as proxy). Migration needed.
 - [ ] Re-taking survey: user can run again and overwrite first_name/last_name/birthdate, append more children. Desired behavior?
+- [ ] `birthday_reminded_year` not in ORM (`src/db/orm.py`) or DB schema. Migration needed (scenario 19 Flow B).

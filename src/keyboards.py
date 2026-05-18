@@ -198,6 +198,40 @@ def adding_child_back_keyboard():
     return builder.as_markup()
 
 
+def coupon_value_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="300", payload="coupon:value:300"),
+        CallbackButton(text="500", payload="coupon:value:500"),
+        CallbackButton(text="1000", payload="coupon:value:1000"),
+        CallbackButton(text="Отмена", payload="coupon:issue_cancel"),
+    )
+    return builder.as_markup()
+
+
+def coupon_days_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="7", payload="coupon:days:7"),
+        CallbackButton(text="14", payload="coupon:days:14"),
+        CallbackButton(text="30", payload="coupon:days:30"),
+        CallbackButton(text="60", payload="coupon:days:60"),
+        CallbackButton(text="Отмена", payload="coupon:issue_cancel"),
+    )
+    return builder.as_markup()
+
+
+def coupon_pct_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="30%", payload="coupon:pct:30"),
+        CallbackButton(text="50%", payload="coupon:pct:50"),
+        CallbackButton(text="70%", payload="coupon:pct:70"),
+        CallbackButton(text="Отмена", payload="coupon:issue_cancel"),
+    )
+    return builder.as_markup()
+
+
 def coupon_display_name_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(

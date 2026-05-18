@@ -13,6 +13,7 @@ from src.keyboards import (
     confirm_revoke_owner_keyboard,
     confirm_coupon_keyboard,
     broadcast_cancel_confirm_keyboard,
+    coupon_value_keyboard,
 )
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
@@ -23,7 +24,12 @@ from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.broadcast import _create_broadcast, _nearest_window_slot, _ask_broadcast_recipients
 from src.handlers.callbacks._common import _delete_step_mids, _append_step_mid, _display_name
 from src.handlers.callbacks.financial_cb import handle_financial_callback
-from src.handlers.text_router import _apply_coupon_display_name
+from src.handlers.text_router import (
+    _apply_coupon_display_name,
+    _do_coupon_value_accepted,
+    _do_coupon_days_accepted,
+    _do_coupon_pct_accepted,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +228,27 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         await _apply_coupon_display_name(bot, user_id, context, display_name)
         return
 
+    if payload.startswith("coupon:value:"):
+        if state != StaffState.AWAITING_COUPON_VALUE:
+            return
+        val = int(payload.split(":")[-1])
+        await _do_coupon_value_accepted(bot, user_id, context, val)
+        return
+
+    if payload.startswith("coupon:days:"):
+        if state != StaffState.AWAITING_COUPON_DAYS:
+            return
+        days = int(payload.split(":")[-1])
+        await _do_coupon_days_accepted(bot, user_id, context, days)
+        return
+
+    if payload.startswith("coupon:pct:"):
+        if state != StaffState.AWAITING_COUPON_PCT:
+            return
+        pct = int(payload.split(":")[-1])
+        await _do_coupon_pct_accepted(bot, user_id, context, pct)
+        return
+
     if payload == "coupon:cancel":
         await bot.send_message(user_id=user_id, text="Отменено.")
         return
@@ -243,8 +270,8 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         await context.set_state(StaffState.AWAITING_COUPON_VALUE)
         await bot.send_message(
             user_id=user_id,
-            text="Введите максимальную сумму купона (в рублях, 101–1000):",
-            attachments=[cancel_keyboard("coupon:issue_cancel")],
+            text="Введите максимальную сумму купона (в рублях, 100–5000):",
+            attachments=[coupon_value_keyboard()],
         )
         return
 
@@ -270,12 +297,7 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         else:
             await context.set_state(RegistrationState.REGISTERED)
             customer_id = data.get("coupon_target_customer_id")
-            if state in (
-                StaffState.AWAITING_COUPON_DAYS,
-                StaffState.AWAITING_COUPON_PCT,
-                StaffState.AWAITING_COUPON_DISPLAY_NAME,
-            ) and customer_id:
-                await bot.send_message(user_id=user_id, text="Выдача отменена.")
+            if customer_id:
                 await _send_customer_profile_by_id(bot, user_id, customer_id)
             else:
                 await bot.send_message(user_id=user_id, text="Выдача купона отменена.")
@@ -291,8 +313,8 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         await context.set_state(StaffState.AWAITING_COUPON_VALUE)
         sent = await bot.send_message(
             user_id=user_id,
-            text="Введите максимальную сумму купона (в рублях, 101–1000):",
-            attachments=[cancel_keyboard("coupon:issue_cancel")],
+            text="Введите максимальную сумму купона (в рублях, 100–5000):",
+            attachments=[coupon_value_keyboard()],
         )
         await _append_step_mid(context, sent.message.body.mid)
         return
