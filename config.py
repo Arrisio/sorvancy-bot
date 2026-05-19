@@ -15,6 +15,10 @@ OWNER_ID: int | None = (
     int(os.environ["OWNER_ID"]) if os.environ.get("OWNER_ID") else None
 )
 
+SUPPORT_ID: int | None = (
+    int(os.environ["SUPPORT_ID"]) if os.environ.get("SUPPORT_ID") else None
+)
+
 BROADCAST_SEND_DELAY_SECONDS: float = float(os.environ.get("BROADCAST_SEND_DELAY_SECONDS", 15))
 BROADCAST_WINDOW_START_HOUR: int = int(os.environ.get("BROADCAST_WINDOW_START_HOUR", 10))
 BROADCAST_WINDOW_END_HOUR: int = int(os.environ.get("BROADCAST_WINDOW_END_HOUR", 17))

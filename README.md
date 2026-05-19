@@ -99,6 +99,7 @@ docker compose up -d
 | `DB_PASSWORD` | Пароль БД | ✓ |
 | `DISCOUNT_PERCENT` | Размер скидки при регистрации (%) | ✓ |
 | `OWNER_ID` | ID аккаунта Max Messenger владельца магазина — при первом запуске `init_db.py` создаёт запись суперпользователя | ✓ |
+| `SUPPORT_ID` | ID аккаунта Max Messenger для алертов об ошибках (трейсбек уходит в личку) | |
 | `DEEPLINK_BASE` | URL бота для ссылок в QR-кодах (`https://max.ru/botname`) | ✓ |
 | `INVITE_SECRET` | Секрет для HMAC-подписи токенов приглашения продавцов | ✓ |
 | `TZ` | Часовой пояс бота (`Asia/Yekaterinburg`) | |

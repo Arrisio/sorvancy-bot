@@ -8,6 +8,7 @@ from maxapi.types import MessageCreated, MessageCallback, BotStarted
 from src.db.connection import get_session_factory
 from src.models import staff as staff_model
 from src.models import customer as customer_model
+import src.alerts as alerts
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,9 @@ class RoutingMiddleware(BaseMiddleware):
 
         try:
             return await handler(event_object, data)
-        except Exception:
+        except Exception as exc:
             logger.exception("Unhandled exception in handler for user_id=%s", user_id)
+            await alerts.send_error_alert(exc, context=f"handler user_id={user_id}")
             try:
                 bot = getattr(event_object, "bot", None)
                 if bot and user_id:

@@ -17,6 +17,7 @@ from src.handlers.financial_settings import register_financial_settings_handlers
 from src.handlers.text_router import register_text_router
 from src.handlers.callback_router import register_callback_router
 from src.scheduler import broadcast_delivery_loop, birthday_reminder_loop, coupon_expiry_loop
+import src.alerts as alerts
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +29,10 @@ logger = logging.getLogger(__name__)
 async def main():
     bot = Bot(config.BOT_TOKEN)
     dp = Dispatcher()
+
+    alerts.init(bot)
+    loop = asyncio.get_event_loop()
+    alerts.setup_global_error_handler(loop)
 
     get_engine()
     logger.info("DB engine initialized")
