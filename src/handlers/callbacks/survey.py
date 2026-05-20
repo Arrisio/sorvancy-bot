@@ -204,7 +204,7 @@ async def handle_survey_callback(
             labels = {
                 "first_name": "Имя",
                 "last_name": "Фамилия",
-                "birthdate": "Дата рождения (ДД.ММ.ГГГГ)",
+                "birthdate": "Дата рождения (ДД.ММ.ГГ или ДД.ММ.ГГГГ)",
             }
             label = labels.get(field, field)
             await bot.send_message(
@@ -237,7 +237,7 @@ async def _resend_survey_step(bot, user_id: int, state: str, context: MemoryCont
             back_and_skip_keyboard("survey:cancel"))
     elif state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
         await _send_step(bot, user_id, context,
-            "Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
+            "Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂\nПример: 12.05.90 или 12.05.1990",
             back_and_skip_keyboard("survey:cancel"))
     elif state == RegistrationState.AWAITING_CHILD_NAME:
         if not children:
@@ -254,7 +254,7 @@ async def _resend_survey_step(bot, user_id: int, state: str, context: MemoryCont
             gender_keyboard())
     elif state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
         await _send_step(bot, user_id, context,
-            f"Ребёнок {n} · шаг 2 из 3 · Когда день рождения у ребёнка? Будем поздравлять! 🎉 (ДД.ММ.ГГГГ)",
+            f"Ребёнок {n} · шаг 2 из 3 · Когда день рождения у ребёнка? Будем поздравлять! 🎉\nПример: 12.05.90 или 12.05.1990",
             back_and_skip_keyboard("survey:cancel"))
     elif state == RegistrationState.AWAITING_MORE_CHILDREN:
         await _send_step(bot, user_id, context,

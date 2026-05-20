@@ -5,6 +5,9 @@ This avoids multiple handlers competing for the same event type.
 """
 import logging
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+_PERM_TZ = ZoneInfo("Asia/Yekaterinburg")
 
 from maxapi.types import MessageCreated
 from maxapi.filters import F
@@ -42,9 +45,10 @@ from src.keyboards import (
     coupon_pct_keyboard,
 )
 import config
-from src.handlers.registration import _format_confirmation, _parse_date, _parse_int_list
+from src.handlers.registration import _format_confirmation, _parse_int_list
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _parse_scheduled_at, _create_broadcast, _in_window, _ask_broadcast_recipients, _save_broadcast_source
+from src.handlers.broadcast import _create_broadcast, _in_window, _ask_broadcast_recipients, _save_broadcast_source
+from src.utils.dates import parse_birthday, parse_broadcast_dt
 from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.callbacks._common import _persist_survey_draft, _append_step_mid, _delete_step_mids, _send_step
 from src.handlers.financial_settings import (
@@ -217,9 +221,8 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             await _send_step(
                 bot, user_id, context,
                 f"Шаг 4 из 4 · Создана рассылка на {len(eligible)} получателей. Когда её начать?\n"
-                f"Рассылку можно запланировать с {config.BROADCAST_WINDOW_START_HOUR}:00 "
-                f"до {config.BROADCAST_WINDOW_END_HOUR}:00.\n"
-                "Укажите дату:\n"
+                f"Окно рассылки: {config.BROADCAST_WINDOW_START_HOUR}:00–{config.BROADCAST_WINDOW_END_HOUR}:00.\n"
+                "Укажите дату или воспользуйтесь кнопками:\n"
                 f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
                 "  • «25.06 14:30» — 25 июня в 14:30",
                 broadcast_start_keyboard(),
@@ -227,11 +230,11 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             return
 
         if state == StaffState.AWAITING_BROADCAST_TIME:
-            scheduled_at = _parse_scheduled_at(text)
-            if scheduled_at is None:
+            scheduled_at, err = parse_broadcast_dt(text, _PERM_TZ, config.BROADCAST_WINDOW_START_HOUR)
+            if err:
                 await _send_step(
                     bot, user_id, context,
-                    "Шаг 4 из 4 · Не понял дату. Укажите в формате «ДД.ММ» или «ДД.ММ ЧЧ:ММ»:\n"
+                    f"Шаг 4 из 4 · {err}:\n"
                     f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
                     "  • «25.06 14:30» — 25 июня в 14:30",
                     broadcast_start_keyboard(),
@@ -493,17 +496,17 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         await _persist_survey_draft(context, user_id)
         await _send_step(
             bot, user_id, context,
-            "Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)",
+            f"Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂\nПример: 12.05.90 или 12.05.1990",
             back_and_skip_keyboard("survey:cancel"),
         )
         return
 
     if state == RegistrationState.AWAITING_CUSTOMER_BIRTHDATE:
-        bd = _parse_date(text)
-        if bd is None:
+        bd, err = parse_birthday(text)
+        if err:
             await _send_step(
                 bot, user_id, context,
-                "Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                err,
                 back_and_skip_keyboard("survey:cancel"),
             )
             return
@@ -543,11 +546,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         return
 
     if state == RegistrationState.AWAITING_CHILD_BIRTHDATE:
-        bd = _parse_date(text)
-        if bd is None:
+        bd, err = parse_birthday(text)
+        if err:
             await _send_step(
                 bot, user_id, context,
-                "Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                err,
                 back_and_skip_keyboard("survey:cancel"),
             )
             return
@@ -572,11 +575,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         field = data.get("draft.editing_field")
         if field:
             if field == "birthdate":
-                val = _parse_date(text)
-                if val is None:
+                val, err = parse_birthday(text)
+                if err:
                     await _send_step(
                         bot, user_id, context,
-                        "Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                        err,
                         back_keyboard(),
                     )
                     return
@@ -620,11 +623,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         data = await context.get_data()
         field = data.get("edit.field")
         if field == "birthdate":
-            val = _parse_date(text)
-            if val is None:
+            val, err = parse_birthday(text)
+            if err:
                 await bot.send_message(
                     user_id=user_id,
-                    text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                    text=err,
                     attachments=[back_keyboard()],
                 )
                 return
@@ -660,11 +663,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         return
 
     if state == ProfileState.ADDING_CHILD_BIRTHDATE:
-        bd = _parse_date(text)
-        if bd is None:
+        bd, err = parse_birthday(text)
+        if err:
             await bot.send_message(
                 user_id=user_id,
-                text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                text=err,
                 attachments=[back_and_skip_keyboard()],
             )
             return
@@ -728,11 +731,11 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
         child_id = data.get("edit.child_id")
         child_field = data.get("edit.child_field")
         if child_field == "birthdate":
-            val = _parse_date(text)
-            if val is None:
+            val, err = parse_birthday(text)
+            if err:
                 await bot.send_message(
                     user_id=user_id,
-                    text="Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):",
+                    text=err,
                     attachments=[back_keyboard()],
                 )
                 return

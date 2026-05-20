@@ -20,6 +20,10 @@ User clicks «Заполнить анкету» button (payload `survey:start`).
 
 All answers accumulated in MemoryContext (`draft.*` keys) during survey. At each FSM state transition, full context (FSM state + all `draft.*` keys) written to `customer.survey_draft` (JSONB) in DB — survives bot restart. Final profile data written to Customer fields in single transaction at step 10. `survey_draft` cleared (set null) on completion or cancellation. Children exist only in draft until step 10 → save.
 
+## Date input format
+
+Birthdate fields accept `ДД.ММ.ГГ` or `ДД.ММ.ГГГГ`; any non-digit character accepted as separator. Two-digit year resolved by rule: if `YY ≤ current_year % 100` → `2000 + YY`, else → `1900 + YY`. Example: in 2025, `90` → `1990`; `22` → `2022`.
+
 ## Main flow
 
 Progress shown in each message: «Шаг N из 4» for customer steps; «Ребёнок N · шаг M из 3» for child steps.
@@ -30,10 +34,10 @@ Bot records message ID of each question in `step_mids` (MemoryContext) as steps 
 |------|-------|----------|-------------|
 | 1 | REGISTERED | Delete survey offer message. Set AWAITING_NAME. «Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:» + [Отмена] | Types name or clicks Отмена |
 | 2 | AWAITING_NAME | Store `draft.first_name`. Set AWAITING_LAST_NAME. «Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. Можно пропустить 😊» + [Пропустить] [← Назад] | Types or skips |
-| 3 | AWAITING_LAST_NAME | Store `draft.last_name` (null if skipped). Set AWAITING_CUSTOMER_BIRTHDATE. «Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂 (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
+| 3 | AWAITING_LAST_NAME | Store `draft.last_name` (null if skipped). Set AWAITING_CUSTOMER_BIRTHDATE. «Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂\nПример: 12.05.90 или 12.05.1990» + [Пропустить] [← Назад] | Types or skips |
 | 4 | AWAITING_CUSTOMER_BIRTHDATE | Store `draft.birthdate` (null if skipped). Set AWAITING_CHILD_NAME. «Шаг 4 из 4 · Как зовут вашего ребёнка?» + (if 0 children in draft: [Покупаю для себя]) + [← Назад] | Types name or clicks Покупаю для себя |
 | 5 | AWAITING_CHILD_NAME | Append child draft entry `{name}`. Set AWAITING_CHILD_GENDER. «Ребёнок N · шаг 1 из 3 · Ваш ребёнок — мальчик или девочка? Подберём подходящие предложения:» + [Мальчик] [Девочка] [← Назад] | Clicks button |
-| 6 | AWAITING_CHILD_GENDER | Store `gender` into current child draft. Set AWAITING_CHILD_BIRTHDATE. «Ребёнок N · шаг 2 из 3 · Когда день рождения у ребёнка? Будем поздравлять! 🎉 (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
+| 6 | AWAITING_CHILD_GENDER | Store `gender` into current child draft. Set AWAITING_CHILD_BIRTHDATE. «Ребёнок N · шаг 2 из 3 · Когда день рождения у ребёнка? Будем поздравлять! 🎉\nПример: 12.05.90 или 12.05.1990» + [Пропустить] [← Назад] | Types or skips |
 | 7 | AWAITING_CHILD_BIRTHDATE | Store `birthdate` into current child draft (null if skipped). Set AWAITING_MORE_CHILDREN. «Ребёнок N · шаг 3 из 3 · Хотите добавить ещё одного ребёнка?» + [Да] [Нет] | Clicks button |
 | 8 | AWAITING_MORE_CHILDREN | **Да** → new child draft entry, set AWAITING_CHILD_NAME, go to step 5. **Нет** → set AWAITING_CONFIRMATION, send confirmation card (see section below). | Clicks button on confirmation card |
 | 9 | AWAITING_CONFIRMATION | User reviews draft. May edit fields inline (see section below). On [✅ Сохранить] → set AWAITING_CONTACT, send contact prompt. | Clicks Сохранить or edits |
@@ -141,8 +145,12 @@ Child draft data is NOT deleted on back — stays in `draft.children`. Children 
 ## Alternative flows
 
 ### A1: Invalid date input
-- Bot: «Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):»
-- State unchanged, user retries
+Bot response depends on rejection reason:
+- Wrong format (not 3 parts): «Не понял дату. Введите в формате ДД.ММ.ГГ или ДД.ММ.ГГГГ, разделитель любой — например 12.05.90:»
+- Date doesn't exist (e.g. 31 Feb): «Такой даты не существует (например, 31 февраля). Попробуйте ещё раз:»
+- Date is in the future: «День рождения не может быть в будущем. Введите корректную дату:»
+
+State unchanged, user retries.
 
 ### A2: Resume interrupted survey
 - Trigger: user clicks «Заполнить анкету» (payload `survey:start`) OR «Продолжить заполнение анкеты» (payload `survey:resume`) when `customer.survey_draft IS NOT NULL` and `survey_completed = false`

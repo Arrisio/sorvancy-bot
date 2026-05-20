@@ -15,6 +15,10 @@ User clicks «Мой профиль» button in registered keyboard (payload `pr
 - Customer record exists in DB (scenario 01 complete)
 - FSM state = REGISTERED
 
+## Date input format
+
+Same rule as scenario 02: accepts `ДД.ММ.ГГ` or `ДД.ММ.ГГГГ`, any non-digit separator. Two-digit year: `YY ≤ current_year % 100` → `2000 + YY`, else → `1900 + YY`.
+
 ## Main flow
 
 ### Profile card
@@ -128,7 +132,7 @@ User clicks [➕ Добавить ребёнка] → 3-step sub-form:
 |------|-------|----------|-------------|
 | A | ADDING_CHILD_NAME | «Как зовут ребёнка?» + [← Отмена] | Types name |
 | B | ADDING_CHILD_GENDER | «Ваш ребёнок — мальчик или девочка?» + [Мальчик] [Девочка] [← Назад] | Clicks button |
-| C | ADDING_CHILD_BIRTHDATE | «Когда день рождения у ребёнка? (ДД.ММ.ГГГГ)» + [Пропустить] [← Назад] | Types or skips |
+| C | ADDING_CHILD_BIRTHDATE | «Когда день рождения у ребёнка?\nПример: 12.05.90 или 12.05.2020» + [Пропустить] [← Назад] | Types or skips |
 
 After step C: create Child record in DB (name + gender from session; birthdate or null). Re-show children list with new child added.
 
@@ -156,8 +160,12 @@ Back within add-child sub-form:
 ## Alternative flows
 
 ### A1: Invalid date input (editing birthdate fields)
-- Bot: «Не понял дату. Введите в формате ДД.ММ.ГГГГ (разделитель любой):»
-- State unchanged, user retries
+Bot response depends on rejection reason:
+- Wrong format (not 3 parts): «Не понял дату. Введите в формате ДД.ММ.ГГ или ДД.ММ.ГГГГ, разделитель любой — например 12.05.90:»
+- Date doesn't exist (e.g. 31 Feb): «Такой даты не существует (например, 31 февраля). Попробуйте ещё раз:»
+- Date is in the future: «День рождения не может быть в будущем. Введите корректную дату:»
+
+State unchanged, user retries.
 
 ### A2: DB write fails on field update or child add/delete
 - Bot: «Не удалось сохранить изменение. Попробуйте ещё раз.»

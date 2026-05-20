@@ -66,7 +66,7 @@ async def handle_profile_callback(
         labels = {
             "first_name": "Имя",
             "last_name": "Фамилия",
-            "birthdate": "Дата рождения (ДД.ММ.ГГГГ)",
+            "birthdate": "Дата рождения (ДД.ММ.ГГ или ДД.ММ.ГГГГ)",
             "phone": "Телефон",
         }
         label = labels.get(field, field)
@@ -187,7 +187,7 @@ async def handle_profile_callback(
                 user_id=user_id, text="Выберите пол:", attachments=[gender_keyboard()]
             )
         else:
-            labels = {"name": "Имя", "birthdate": "Дата рождения (ДД.ММ.ГГГГ)"}
+            labels = {"name": "Имя", "birthdate": "Дата рождения (ДД.ММ.ГГ или ДД.ММ.ГГГГ)"}
             await bot.send_message(
                 user_id=user_id,
                 text=f"Введите новое значение — {labels.get(child_field, child_field)}:",
@@ -259,7 +259,7 @@ async def handle_profile_callback(
         await context.set_state(ProfileState.ADDING_CHILD_BIRTHDATE)
         sent = await bot.send_message(
             user_id=user_id,
-            text="Когда день рождения у ребёнка? (ДД.ММ.ГГГГ)",
+            text="Когда день рождения у ребёнка?\nПример: 12.05.90 или 12.05.2020",
             attachments=[back_and_skip_keyboard("child:add_cancel")],
         )
         await _append_step_mid(context, sent.message.body.mid)

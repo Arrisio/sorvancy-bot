@@ -1,6 +1,5 @@
 import re
 import logging
-from datetime import date
 
 from maxapi.types import MessageCreated
 from maxapi.filters import F
@@ -20,17 +19,6 @@ from src.services.discount import registration_complete_message, survey_offer_me
 import config
 
 logger = logging.getLogger(__name__)
-
-
-def _parse_date(text: str) -> date | None:
-    parts = [p for p in re.split(r"\D+", text.strip()) if p]
-    if len(parts) != 3:
-        return None
-    d, m, y = parts
-    try:
-        return date(int(y), int(m), int(d))
-    except ValueError:
-        return None
 
 
 def _parse_int_list(text: str) -> list[int]:

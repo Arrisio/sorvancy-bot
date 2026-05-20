@@ -354,6 +354,9 @@ def broadcast_start_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(
         CallbackButton(text="Начать в ближайшее время", payload="broadcast:soonest"),
+        CallbackButton(text="Завтра", payload="broadcast:tomorrow"),
+    )
+    builder.row(
         CallbackButton(text="Отмена", payload="broadcast:cancel"),
     )
     return builder.as_markup()

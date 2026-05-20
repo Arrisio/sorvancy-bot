@@ -3,7 +3,6 @@ Broadcast reply-keyboard button handlers (scenarios 11, 12).
 Text and callback handling is in text_router.py and callback_router.py.
 """
 import logging
-import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -49,25 +48,11 @@ def _nearest_window_slot() -> datetime:
     return (now + timedelta(days=1)).replace(hour=start, minute=0, second=0, microsecond=0)
 
 
-def _parse_scheduled_at(text: str) -> datetime | None:
-    text = text.strip()
-    m = re.match(r"(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})$", text)
-    if m:
-        d, mo, h, mi = int(m[1]), int(m[2]), int(m[3]), int(m[4])
-        year = datetime.now(_PERM_TZ).year
-        try:
-            return datetime(year, mo, d, h, mi, tzinfo=_PERM_TZ)
-        except ValueError:
-            return None
-    m = re.match(r"(\d{1,2})\.(\d{1,2})$", text)
-    if m:
-        d, mo = int(m[1]), int(m[2])
-        year = datetime.now(_PERM_TZ).year
-        try:
-            return datetime(year, mo, d, config.BROADCAST_WINDOW_START_HOUR, 0, tzinfo=_PERM_TZ)
-        except ValueError:
-            return None
-    return None
+def _tomorrow_window_slot() -> datetime:
+    now = datetime.now(_PERM_TZ)
+    return (now + timedelta(days=1)).replace(
+        hour=config.BROADCAST_WINDOW_START_HOUR, minute=0, second=0, microsecond=0
+    )
 
 
 async def register_broadcast_handlers(dp):
