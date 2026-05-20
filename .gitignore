@@ -179,3 +179,4 @@ pip-selfcheck.json
 
 tmp/
 .idea/
+/scripts/db-tunnel.sh
