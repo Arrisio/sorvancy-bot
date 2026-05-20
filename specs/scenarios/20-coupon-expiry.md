@@ -33,4 +33,4 @@ None.
 - None.
 
 ## Open questions
-- [ ] Job interval: daily (midnight) or same as birthday_check (once per day at fixed time)?
+None.
