@@ -67,11 +67,12 @@ async def register_registration_handlers(dp):
             async with get_session_factory()() as session:
                 async with session.begin():
                     cfg = await financial_config_model.get_or_create(session)
+                    registration_pct = cfg.registration_discount_pct
                     await customer_model.create(
                         session,
                         max_user_id=user_id,
                         max_username=username,
-                        discount_percent=cfg.registration_discount_pct,
+                        discount_percent=registration_pct,
                     )
             logger.info("Registered max_user_id=%s (phase 1)", user_id)
         except Exception:
@@ -92,7 +93,7 @@ async def register_registration_handlers(dp):
 
         await event.bot.send_message(
             user_id=user_id,
-            text=registration_complete_message(),
+            text=registration_complete_message(registration_pct),
             attachments=[registered_keyboard()],
         )
 

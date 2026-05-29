@@ -3,8 +3,7 @@ import qrcode
 import config
 
 
-def registration_complete_message() -> str:
-    pct = config.DISCOUNT_PERCENT
+def registration_complete_message(pct: int) -> str:
     return f"Вы зарегистрированы! Ваша скидка — {pct}%."
 
 
@@ -15,8 +14,7 @@ def survey_offer_message() -> str:
     )
 
 
-def discount_card(first_name: str) -> str:
-    pct = config.DISCOUNT_PERCENT
+def discount_card(first_name: str, pct: int) -> str:
     return (
         f"┌─────────────────────────┐\n"
         f"│  🏷 СКИДКА {pct}%             │\n"
