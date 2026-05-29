@@ -16,9 +16,12 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            if [ ! -d /opt/sorvancy-bot/.git ]; then
-              git clone https://github.com/Arrisio/sorvancy-bot.git /opt/sorvancy-bot
-            fi
+            mkdir -p /opt/sorvancy-bot
             cd /opt/sorvancy-bot
-            git pull
+            if [ ! -d .git ]; then
+              git init
+              git remote add origin https://github.com/Arrisio/sorvancy-bot.git
+            fi
+            git fetch origin main
+            git checkout -B main origin/main
             docker compose up -d --build
