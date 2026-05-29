@@ -21,14 +21,14 @@ from src.models import coupon as coupon_model
 from src.models import staff as staff_model
 from src.models import broadcast as broadcast_model
 from src.handlers.staff import _send_customer_profile_by_id
-from src.handlers.broadcast import _create_broadcast, _nearest_window_slot, _tomorrow_window_slot, _ask_broadcast_recipients
+from src.handlers.broadcast import _create_broadcast, _nearest_window_slot, _tomorrow_window_slot, _ask_broadcast_recipients, _ask_broadcast_comment
 from src.handlers.callbacks._common import _delete_step_mids, _append_step_mid, _display_name
 from src.handlers.callbacks.financial_cb import handle_financial_callback
 from src.handlers.text_router import (
     _apply_coupon_display_name,
     _do_coupon_value_accepted,
     _do_coupon_days_accepted,
-    _do_coupon_pct_accepted,
+    _do_coupon_min_purchase_accepted,
 )
 
 logger = logging.getLogger(__name__)
@@ -242,11 +242,11 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         await _do_coupon_days_accepted(bot, user_id, context, days)
         return
 
-    if payload.startswith("coupon:pct:"):
-        if state != StaffState.AWAITING_COUPON_PCT:
+    if payload.startswith("coupon:min_purchase:"):
+        if state != StaffState.AWAITING_COUPON_MIN_PURCHASE:
             return
-        pct = int(payload.split(":")[-1])
-        await _do_coupon_pct_accepted(bot, user_id, context, pct)
+        min_purchase = int(payload.split(":")[-1])
+        await _do_coupon_min_purchase_accepted(bot, user_id, context, min_purchase)
         return
 
     if payload == "coupon:cancel":
@@ -281,7 +281,7 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         if coupon_ctx == "broadcast":
             if state in (
                 StaffState.AWAITING_COUPON_DAYS,
-                StaffState.AWAITING_COUPON_PCT,
+                StaffState.AWAITING_COUPON_MIN_PURCHASE,
                 StaffState.AWAITING_COUPON_DISPLAY_NAME,
             ):
                 await bot.send_message(
@@ -328,10 +328,11 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
     if payload == "broadcast:cancel_create":
         if state in (
             StaffState.AWAITING_COUPON_DAYS,
-            StaffState.AWAITING_COUPON_PCT,
+            StaffState.AWAITING_COUPON_MIN_PURCHASE,
             StaffState.AWAITING_COUPON_DISPLAY_NAME,
             StaffState.AWAITING_BROADCAST_RECIPIENTS,
             StaffState.AWAITING_BROADCAST_TIME,
+            StaffState.AWAITING_BROADCAST_COMMENT,
         ):
             await bot.send_message(
                 user_id=user_id,
@@ -363,15 +364,23 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
     if payload == "broadcast:soonest":
         if state != StaffState.AWAITING_BROADCAST_TIME:
             return
-        await context.set_state(RegistrationState.REGISTERED)
-        await _create_broadcast(bot, user_id, context, _nearest_window_slot())
+        await _ask_broadcast_comment(bot, user_id, context, _nearest_window_slot())
         return
 
     if payload == "broadcast:tomorrow":
         if state != StaffState.AWAITING_BROADCAST_TIME:
             return
+        await _ask_broadcast_comment(bot, user_id, context, _tomorrow_window_slot())
+        return
+
+    if payload == "broadcast:skip_comment":
+        if state != StaffState.AWAITING_BROADCAST_COMMENT:
+            return
+        await context.update_data(broadcast_comment=None)
+        data = await context.get_data()
+        scheduled_at = data.get("broadcast_scheduled_at")
         await context.set_state(RegistrationState.REGISTERED)
-        await _create_broadcast(bot, user_id, context, _tomorrow_window_slot())
+        await _create_broadcast(bot, user_id, context, scheduled_at)
         return
 
     if payload == "broadcast:cancel":
@@ -379,9 +388,14 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
             StaffState.AWAITING_BROADCAST_TIME,
             StaffState.AWAITING_BROADCAST_RECIPIENTS,
             StaffState.AWAITING_BROADCAST_MSG,
+            StaffState.AWAITING_BROADCAST_COMMENT,
         ):
             return
-        if state in (StaffState.AWAITING_BROADCAST_TIME, StaffState.AWAITING_BROADCAST_RECIPIENTS):
+        if state in (
+            StaffState.AWAITING_BROADCAST_TIME,
+            StaffState.AWAITING_BROADCAST_RECIPIENTS,
+            StaffState.AWAITING_BROADCAST_COMMENT,
+        ):
             await bot.send_message(
                 user_id=user_id,
                 text="Данные не сохранятся. Отменить рассылку?",

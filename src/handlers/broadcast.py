@@ -16,6 +16,7 @@ from src.states import StaffState, RegistrationState
 from src.keyboards import (
     broadcast_start_keyboard,
     broadcast_coupon_choice_keyboard,
+    broadcast_comment_keyboard,
     cancel_broadcast_keyboard,
     cancel_keyboard,
     superuser_keyboard,
@@ -117,8 +118,19 @@ async def _ask_broadcast_recipients(bot, user_id: int, context) -> None:
     await context.set_state(StaffState.AWAITING_BROADCAST_RECIPIENTS)
     sent = await bot.send_message(
         user_id=user_id,
-        text="Шаг 3 из 4 · Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
+        text="Шаг 3 из 5 · Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
         attachments=[cancel_keyboard("broadcast:cancel_create")],
+    )
+    await _append_step_mid(context, sent.message.body.mid)
+
+
+async def _ask_broadcast_comment(bot, user_id: int, context, scheduled_at: datetime) -> None:
+    await context.update_data(broadcast_scheduled_at=scheduled_at)
+    await context.set_state(StaffState.AWAITING_BROADCAST_COMMENT)
+    sent = await bot.send_message(
+        user_id=user_id,
+        text="Шаг 5 из 5 · Добавьте комментарий к рассылке (виден только вам) или пропустите:",
+        attachments=[broadcast_comment_keyboard()],
     )
     await _append_step_mid(context, sent.message.body.mid)
 
@@ -132,6 +144,7 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
     coupon_days = data.get("broadcast_coupon_days")
     coupon_min_purchase = data.get("broadcast_coupon_min_purchase")
     coupon_display_name = data.get("broadcast_coupon_display_name")
+    comment = data.get("broadcast_comment")
 
     if not mid or not recipient_ids:
         await bot.send_message(user_id=user_id, text="Ошибка: нет данных для рассылки.")
@@ -154,6 +167,7 @@ async def _create_broadcast(bot, user_id: int, context, scheduled_at: datetime):
                     coupon_validity_days=coupon_days,
                     coupon_min_purchase_amount=coupon_min_purchase,
                     coupon_display_name=coupon_display_name,
+                    comment=comment,
                 )
                 await broadcast_model.create_recipients(session, b.id, recipient_ids)
     except Exception:

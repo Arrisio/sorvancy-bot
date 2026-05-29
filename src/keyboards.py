@@ -373,3 +373,12 @@ def broadcast_cancel_confirm_keyboard():
         CallbackButton(text="Продолжить", payload="broadcast:continue"),
     )
     return builder.as_markup()
+
+
+def broadcast_comment_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="Пропустить", payload="broadcast:skip_comment"),
+        CallbackButton(text="Отмена", payload="broadcast:cancel"),
+    )
+    return builder.as_markup()

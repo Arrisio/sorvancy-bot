@@ -19,6 +19,7 @@ async def create(
     coupon_validity_days: int | None = None,
     coupon_min_purchase_amount: int | None = None,
     coupon_display_name: str | None = None,
+    comment: str | None = None,
 ) -> Broadcast:
     broadcast = Broadcast(
         source_message_id=source_message_id,
@@ -31,6 +32,7 @@ async def create(
         coupon_validity_days=coupon_validity_days,
         coupon_min_purchase_amount=coupon_min_purchase_amount,
         coupon_display_name=coupon_display_name,
+        comment=comment,
     )
     session.add(broadcast)
     await session.flush()

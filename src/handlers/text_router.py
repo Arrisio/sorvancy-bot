@@ -42,12 +42,13 @@ from src.keyboards import (
     coupon_display_name_keyboard,
     coupon_value_keyboard,
     coupon_days_keyboard,
-    coupon_pct_keyboard,
+    coupon_min_purchase_keyboard,
+    broadcast_comment_keyboard,
 )
 import config
 from src.handlers.registration import _format_confirmation, _parse_int_list
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _create_broadcast, _in_window, _ask_broadcast_recipients, _save_broadcast_source
+from src.handlers.broadcast import _create_broadcast, _in_window, _ask_broadcast_recipients, _save_broadcast_source, _ask_broadcast_comment
 from src.utils.dates import parse_birthday, parse_broadcast_dt
 from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.callbacks._common import _persist_survey_draft, _append_step_mid, _delete_step_mids, _send_step
@@ -78,22 +79,22 @@ async def _do_coupon_days_accepted(bot, user_id: int, context, days: int) -> Non
     data = await context.get_data()
     coupon_ctx = data.get("coupon_context", "seller")
     await context.update_data(coupon_draft_days=days)
-    await context.set_state(StaffState.AWAITING_COUPON_PCT)
+    await context.set_state(StaffState.AWAITING_COUPON_MIN_PURCHASE)
     sent = await bot.send_message(
         user_id=user_id,
-        text="Введите % суммы покупки, которые можно оплатить купоном (1–100%):",
-        attachments=[coupon_pct_keyboard()],
+        text="Выберите минимальную сумму покупки для применения купона (в руб.) или введите своё значение:",
+        attachments=[coupon_min_purchase_keyboard()],
     )
     if coupon_ctx == "broadcast":
         await _append_step_mid(context, sent.message.body.mid)
 
 
-async def _do_coupon_pct_accepted(bot, user_id: int, context, pct: int) -> None:
+async def _do_coupon_min_purchase_accepted(bot, user_id: int, context, min_purchase: int) -> None:
     data = await context.get_data()
     coupon_ctx = data.get("coupon_context", "seller")
     value = data.get("coupon_draft_value")
     days = data.get("coupon_draft_days")
-    await context.update_data(coupon_draft_pct=pct)
+    await context.update_data(coupon_draft_min_purchase=min_purchase)
     expiry = datetime.now(timezone.utc) + timedelta(days=days)
     suggested = f"{value} ₽ до {expiry.strftime('%d.%m.%y')}"
     await context.update_data(coupon_draft_suggested_display_name=suggested)
@@ -114,13 +115,13 @@ async def _do_coupon_pct_accepted(bot, user_id: int, context, pct: int) -> None:
 async def _apply_coupon_display_name(bot, user_id: int, context, display_name: str) -> None:
     data = await context.get_data()
     coupon_ctx = data.get("coupon_context", "seller")
-    pct = data.get("coupon_draft_pct")
+    min_purchase = data.get("coupon_draft_min_purchase", 0)
 
     if coupon_ctx == "broadcast":
         await context.update_data(
             broadcast_coupon_value=data.get("coupon_draft_value"),
             broadcast_coupon_days=data.get("coupon_draft_days"),
-            broadcast_coupon_pct=pct,
+            broadcast_coupon_min_purchase=min_purchase,
             broadcast_coupon_display_name=display_name,
             coupon_context=None,
         )
@@ -136,7 +137,7 @@ async def _apply_coupon_display_name(bot, user_id: int, context, display_name: s
         async with get_session_factory()() as session:
             async with session.begin():
                 issued_coupon = await coupon_model.create_seller_coupon(
-                    session, customer_id, value, days, pct, display_name
+                    session, customer_id, value, days, min_purchase, display_name
                 )
                 cust = await customer_model.get_by_id(session, customer_id)
     except Exception:
@@ -189,9 +190,9 @@ def _validate_financial_field(field: str, val: int) -> str | None:
     elif field.endswith("_valid_days"):
         if val <= 0:
             return "Срок должен быть больше 0."
-    elif field.endswith("_max_pct"):
-        if val < 1 or val > 100:
-            return "Введите процент от 1 до 100."
+    elif field.endswith("_min_purchase"):
+        if val < 0:
+            return "Введите целое число от 0 и выше."
     return None
 
 
@@ -234,7 +235,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             if err:
                 await _send_step(
                     bot, user_id, context,
-                    f"Шаг 4 из 4 · {err}:\n"
+                    f"Шаг 4 из 5 · {err}:\n"
                     f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
                     "  • «25.06 14:30» — 25 июня в 14:30",
                     broadcast_start_keyboard(),
@@ -243,12 +244,20 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
             if not _in_window(scheduled_at):
                 await _send_step(
                     bot, user_id, context,
-                    f"Шаг 4 из 4 · Время {scheduled_at.strftime('%H:%M')} недоступно. "
+                    f"Шаг 4 из 5 · Время {scheduled_at.strftime('%H:%M')} недоступно. "
                     f"Укажите с {config.BROADCAST_WINDOW_START_HOUR}:00 "
                     f"до {config.BROADCAST_WINDOW_END_HOUR}:00:",
                     broadcast_start_keyboard(),
                 )
                 return
+            await _ask_broadcast_comment(bot, user_id, context, scheduled_at)
+            return
+
+        if state == StaffState.AWAITING_BROADCAST_COMMENT:
+            await context.update_data(broadcast_comment=text)
+            data = await context.get_data()
+            scheduled_at = data.get("broadcast_scheduled_at")
+            await context.set_state(RegistrationState.REGISTERED)
             await _create_broadcast(bot, user_id, context, scheduled_at)
             return
 
@@ -362,24 +371,24 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         await _do_coupon_days_accepted(bot, user_id, context, days)
         return
 
-    if state == StaffState.AWAITING_COUPON_PCT:
+    if state == StaffState.AWAITING_COUPON_MIN_PURCHASE:
         try:
-            pct = int(text)
+            min_purchase = int(text)
         except ValueError:
             await bot.send_message(
                 user_id=user_id,
                 text="Введите целое число.",
-                attachments=[coupon_pct_keyboard()],
+                attachments=[coupon_min_purchase_keyboard()],
             )
             return
-        if pct < 1 or pct > 100:
+        if min_purchase < 0:
             await bot.send_message(
                 user_id=user_id,
-                text="Введите процент от 1 до 100.",
-                attachments=[coupon_pct_keyboard()],
+                text="Введите целое число от 0 и выше.",
+                attachments=[coupon_min_purchase_keyboard()],
             )
             return
-        await _do_coupon_pct_accepted(bot, user_id, context, pct)
+        await _do_coupon_min_purchase_accepted(bot, user_id, context, min_purchase)
         return
 
     if state == StaffState.AWAITING_COUPON_DISPLAY_NAME:
@@ -696,7 +705,7 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
                         new_survey_coupon = await coupon_model.create_survey_coupon(
                             session, customer.id,
                             value=cfg.survey_coupon_value,
-                            max_pct=cfg.survey_coupon_max_pct,
+                            min_purchase=cfg.survey_coupon_min_purchase,
                             valid_days=cfg.survey_coupon_valid_days,
                         )
                     children = await child_model.get_by_customer(session, customer.id)

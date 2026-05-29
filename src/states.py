@@ -45,3 +45,4 @@ class StaffState:
     AWAITING_COUPON_MIN_PURCHASE = "awaiting_coupon_min_purchase"
     AWAITING_COUPON_DISPLAY_NAME = "awaiting_coupon_display_name"
     AWAITING_FINANCIAL_PARAM_VALUE = "awaiting_financial_param_value"
+    AWAITING_BROADCAST_COMMENT = "awaiting_broadcast_comment"

@@ -157,6 +157,7 @@ class Broadcast(Base):
     coupon_validity_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coupon_min_purchase_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coupon_display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     creator: Mapped["Staff"] = relationship(back_populates="broadcasts")
     recipients: Mapped[list["BroadcastRecipient"]] = relationship(back_populates="broadcast")

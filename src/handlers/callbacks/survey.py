@@ -360,7 +360,7 @@ async def _complete_survey(bot, user_id: int, context: MemoryContext) -> None:
                     survey_coupon = await coupon_model.create_survey_coupon(
                         session, cust.id,
                         value=cfg.survey_coupon_value,
-                        max_pct=cfg.survey_coupon_max_pct,
+                        min_purchase=cfg.survey_coupon_min_purchase,
                         valid_days=cfg.survey_coupon_valid_days,
                     )
                 await customer_model.clear_survey_draft(session, user_id)

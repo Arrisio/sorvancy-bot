@@ -46,7 +46,7 @@ def survey_coupon_card_text(cfg) -> str:
         "🎁 Купон за анкету\n"
         f"Сумма: {cfg.survey_coupon_value} ₽\n"
         f"Срок действия: {cfg.survey_coupon_valid_days} дней\n"
-        f"Макс. % от покупки: {cfg.survey_coupon_max_pct}%"
+        f"Мин. сумма покупки: {cfg.survey_coupon_min_purchase} ₽"
     )
 
 
@@ -55,7 +55,7 @@ def birthday_coupon_card_text(cfg) -> str:
         "🎂 Купон на день рождения\n"
         f"Сумма: {cfg.birthday_coupon_value} ₽\n"
         f"Срок действия: {cfg.birthday_coupon_valid_days} дней\n"
-        f"Макс. % от покупки: {cfg.birthday_coupon_max_pct}%"
+        f"Мин. сумма покупки: {cfg.birthday_coupon_min_purchase} ₽"
     )
 
 
@@ -65,7 +65,7 @@ def coupon_card_keyboard(coupon_type: str):
     builder.row(
         CallbackButton(text="✏️ Сумма", payload=f"financial:edit:{prefix}_coupon_value"),
         CallbackButton(text="✏️ Срок", payload=f"financial:edit:{prefix}_coupon_valid_days"),
-        CallbackButton(text="✏️ % от покупки", payload=f"financial:edit:{prefix}_coupon_max_pct"),
+        CallbackButton(text="✏️ Мин. сумма", payload=f"financial:edit:{prefix}_coupon_min_purchase"),
     )
     builder.row(CallbackButton(text="← Назад", payload="financial:back"))
     return builder.as_markup()
