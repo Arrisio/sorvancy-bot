@@ -46,10 +46,18 @@ Middleware detects actor on every message — see `nfr/middleware-routing.md`. E
 **Customer** — `registered_keyboard`
 Shown to: registered Customer; Staff with `customer_mode = true`
 
+Row 2, left button is conditional on survey state:
+
+| `survey_completed` | `survey_draft` | Button shown | Payload / scenario |
+|--------------------|----------------|--------------|-------------------|
+| `false` | `null` | «Заполнить анкету» | `survey:start` → 02 Survey |
+| `false` | not null | «Продолжить заполнение» | `survey:resume` → 02 Survey A2 |
+| `true` | any | «Мой профиль» | → 05 Profile Editing |
+
 | Row | Button | Scenario |
 |-----|--------|----------|
 | 1 | «🎁 Скидка и купоны» | → 03 Discount QR |
-| 2 | «Мой профиль» | → 05 Profile Editing |
+| 2 | survey-conditional button (see table above) | → 02 or 05 |
 | 2 | «Связаться с продавцом» | → 17 Contact Seller |
 
 **Staff** (`is_owner = false`, `customer_mode = false`) — `staff_keyboard`

@@ -27,12 +27,10 @@ New Max user gets registered and receives discount in one button click, no form 
 
 5. Bot sets FSM state = `REGISTERED`, initializes MemoryContext: `max_user_id`, `max_username`, `children=[]`
 
-6. Bot sends registration confirmation message (e.g., "Вы зарегистрированы! Ваша скидка — 10%.")
-   with `registered_keyboard_with_contact`
-
-7. Bot sends survey offer message ("Заполните анкету и получите ещё +2%...")
-   with `survey_offer_keyboard` [Пропустить / Заполнить анкету]
-   → stores sent message ID as `survey_offer_mid` in MemoryContext
+6. Bot sends single registration confirmation message:
+   «Вы зарегистрированы! Ваша скидка — {discount_pct}%.
+   {текст_заполнить_анкету}»
+   with `registered_keyboard` (conditional — shows «Заполнить анкету» since survey not yet completed)
 
 ## Alternative flows
 
@@ -50,8 +48,7 @@ New Max user gets registered and receives discount in one button click, no form 
 ## Postconditions
 - Customer row exists: max_user_id + discount_percent set
 - FSM state = `REGISTERED`
-- survey_offer_mid stored in MemoryContext
-- User sees discount percent and survey offer
+- User sees discount percent and survey invite in one message
 
 ## Open questions
 - [ ] Staff `bot_started`: is `staff_keyboard` shown automatically on bot start for known Staff, or only after explicit action?

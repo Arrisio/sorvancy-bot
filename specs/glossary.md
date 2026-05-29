@@ -14,10 +14,9 @@
 | Phase 2 | Survey: enriches Customer with first_name, birthdate; creates Child rows. |
 | Cashier | Store staff who reads discount QR or text card from customer's phone screen. |
 | Coupon | Single-use monetary benefit issued to a Customer. Covers part of purchase up to `value` rubles and `max_payment_pct`% of total. Expires at `valid_until`. `display_name` (≤40 chars) is the label shown on coupon buttons and lists. |
-| registered_keyboard | Persistent keyboard for registered Customer. Button routing: `specs/ux-style-guide.md` §2.1. |
+| registered_keyboard | Persistent keyboard for registered Customer. Row 2 left button is conditional on survey state — see `specs/ux-style-guide.md` §2.1. |
 | unregistered_keyboard | Button set for new users: «Зарегистрироваться и получить скидку». |
-| registered_keyboard_with_contact | Keyboard shown in scenario 01 step 6 immediately after registration. Same buttons as `registered_keyboard` (customer keyboard). |
-| survey_offer_keyboard | Transient keyboard shown in scenario 01 step 7: «Пропустить», «Заполнить анкету». |
+| текст_заполнить_анкету | Survey invite string appended to certain bot messages: «Заполните анкету — и получите купон на {FinancialConfig.survey_coupon_value} ₽!». Shown only when survey not yet completed. |
 | Staff | Store personnel account in the bot — either seller or owner. Created at DB seed (owner) or via contact card forwarding (sellers). |
 | Owner | Staff member with `is_owner = true`. Elevated permissions. Multiple simultaneous owners allowed (substitute owners). Seeded owner identified by `config.OWNER_ID`; their flag cannot be revoked. |
 | Суперпользователь | Project synonym for Owner. Staff member with `is_owner = true`. |
