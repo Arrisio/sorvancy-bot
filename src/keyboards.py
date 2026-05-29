@@ -10,6 +10,8 @@ from maxapi.types import (
 REGISTER_BTN_TEXT = "Зарегистрироваться и получить скидку"
 DISCOUNT_BTN_TEXT = "🎁 Скидка и купоны"
 MY_PROFILE_BTN_TEXT = "Мой профиль"
+FILL_SURVEY_BTN_TEXT = "Заполнить анкету"
+CONTINUE_SURVEY_BTN_TEXT = "Продолжить заполнение"
 CONTACT_STAFF_BTN_TEXT = "Связаться с продавцом"
 
 STAFF_FIND_BTN_TEXT = "Найти профиль"
@@ -27,10 +29,14 @@ def unregistered_keyboard():
     return ButtonsPayload(buttons=[[MessageButton(text=REGISTER_BTN_TEXT)]]).pack()
 
 
-def registered_keyboard():
+def registered_keyboard(survey_completed: bool = True, survey_draft=None):
+    if not survey_completed:
+        profile_btn_text = CONTINUE_SURVEY_BTN_TEXT if survey_draft else FILL_SURVEY_BTN_TEXT
+    else:
+        profile_btn_text = MY_PROFILE_BTN_TEXT
     return ButtonsPayload(buttons=[
         [MessageButton(text=DISCOUNT_BTN_TEXT)],
-        [MessageButton(text=MY_PROFILE_BTN_TEXT), MessageButton(text=CONTACT_STAFF_BTN_TEXT)],
+        [MessageButton(text=profile_btn_text), MessageButton(text=CONTACT_STAFF_BTN_TEXT)],
     ]).pack()
 
 
@@ -52,15 +58,6 @@ def superuser_keyboard():
 
 
 # --- Transient / inline keyboards ---
-
-def survey_offer_keyboard():
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        CallbackButton(text="Пропустить", payload="survey:skip"),
-        CallbackButton(text="Заполнить анкету", payload="survey:start"),
-    )
-    return builder.as_markup()
-
 
 def resume_survey_keyboard():
     builder = InlineKeyboardBuilder()
@@ -221,12 +218,11 @@ def coupon_days_keyboard():
     return builder.as_markup()
 
 
-def coupon_pct_keyboard():
+def coupon_min_purchase_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(
-        CallbackButton(text="30%", payload="coupon:pct:30"),
-        CallbackButton(text="50%", payload="coupon:pct:50"),
-        CallbackButton(text="70%", payload="coupon:pct:70"),
+        CallbackButton(text="1000", payload="coupon:min_purchase:1000"),
+        CallbackButton(text="2000", payload="coupon:min_purchase:2000"),
         CallbackButton(text="Отмена", payload="coupon:issue_cancel"),
     )
     return builder.as_markup()

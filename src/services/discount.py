@@ -3,15 +3,12 @@ import qrcode
 import config
 
 
-def registration_complete_message(pct: int) -> str:
-    return f"Вы зарегистрированы! Ваша скидка — {pct}%."
+def survey_invite_text(survey_coupon_value: int) -> str:
+    return f"Заполните анкету — и получите купон на {survey_coupon_value} ₽!"
 
 
-def survey_offer_message() -> str:
-    return (
-        "Заполните анкету — и получите купон на 300 ₽!\n\n"
-        "Расскажите о себе и своих детях — займёт 2 минуты."
-    )
+def registration_complete_message(pct: int, survey_coupon_value: int) -> str:
+    return f"Вы зарегистрированы! Ваша скидка — {pct}%.\n{survey_invite_text(survey_coupon_value)}"
 
 
 def discount_card(first_name: str, pct: int) -> str:

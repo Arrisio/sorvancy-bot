@@ -170,7 +170,10 @@ async def _route_start(bot, user_id: int, username: str | None, context: MemoryC
                 f"С возвращением, {customer.first_name or 'покупатель'}!\n"
                 f"Ваша скидка {customer.discount_percent}% активна."
             ),
-            attachments=[registered_keyboard()],
+            attachments=[registered_keyboard(
+                survey_completed=customer.survey_completed,
+                survey_draft=customer.survey_draft,
+            )],
         )
         return
 
@@ -215,10 +218,16 @@ async def _send_discount_qr(bot, user_id: int):
     try:
         qr_bytes = make_qr_png(customer.id)
         media = InputMediaBuffer(buffer=qr_bytes, filename="discount_qr.png")
-        await bot.send_message(user_id=user_id, text=text, attachments=[media, registered_keyboard()])
+        await bot.send_message(user_id=user_id, text=text, attachments=[media, registered_keyboard(
+            survey_completed=customer.survey_completed,
+            survey_draft=customer.survey_draft,
+        )])
     except Exception:
         logger.exception("QR generation failed for user %s", user_id)
-        await bot.send_message(user_id=user_id, text=text, attachments=[registered_keyboard()])
+        await bot.send_message(user_id=user_id, text=text, attachments=[registered_keyboard(
+            survey_completed=customer.survey_completed,
+            survey_draft=customer.survey_draft,
+        )])
     async with get_session_factory()() as session:
         async with session.begin():
             await customer_model.update_field(

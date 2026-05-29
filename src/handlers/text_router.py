@@ -55,7 +55,7 @@ from src.handlers.financial_settings import (
     financial_summary_text, financial_summary_keyboard,
     survey_coupon_card_text, birthday_coupon_card_text, coupon_card_keyboard,
 )
-from src.services.discount import coupon_issued_notification
+from src.services.discount import coupon_issued_notification, survey_invite_text
 
 logger = logging.getLogger(__name__)
 
@@ -469,7 +469,7 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
         kb = superuser_keyboard() if staff.is_owner else staff_keyboard()
         await bot.send_message(
             user_id=user_id,
-            text="Извините, я глупый бот и вас не понял, но вы можете явно выбрать одно из следующих действий.",
+            text="Вас приветствует бот магазина «Сорванцы»!",
             attachments=[kb],
         )
 
@@ -759,9 +759,23 @@ async def _handle_customer_text(event, context, customer, state, text, user_id, 
 
     # Fallback: unrecognised message in idle state
     if state in (RegistrationState.REGISTERED, None):
-        kb = unregistered_keyboard() if route == "registration" else registered_keyboard()
-        await bot.send_message(
-            user_id=user_id,
-            text="Извините, я глупый бот и вас не понял, но вы можете явно выбрать одно из следующих действий.",
-            attachments=[kb],
-        )
+        if route == "registration":
+            await bot.send_message(
+                user_id=user_id,
+                text="Вас приветствует бот магазина «Сорванцы»!",
+                attachments=[unregistered_keyboard()],
+            )
+        else:
+            text = "Вас приветствует бот магазина «Сорванцы»!"
+            if customer is not None and not customer.survey_completed:
+                async with get_session_factory()() as session:
+                    cfg = await financial_config_model.get_or_create(session)
+                text += f"\n{survey_invite_text(cfg.survey_coupon_value)}"
+            await bot.send_message(
+                user_id=user_id,
+                text=text,
+                attachments=[registered_keyboard(
+                    survey_completed=customer.survey_completed if customer else True,
+                    survey_draft=customer.survey_draft if customer else None,
+                )],
+            )

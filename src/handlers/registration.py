@@ -9,13 +9,14 @@ from src.states import RegistrationState
 from src.keyboards import (
     registered_keyboard,
     unregistered_keyboard,
-    survey_offer_keyboard,
     REGISTER_BTN_TEXT,
+    FILL_SURVEY_BTN_TEXT,
+    CONTINUE_SURVEY_BTN_TEXT,
 )
 from src.db.connection import get_session_factory
 from src.models import customer as customer_model
 from src.models import financial_config as financial_config_model
-from src.services.discount import registration_complete_message, survey_offer_message
+from src.services.discount import registration_complete_message
 import config
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,10 @@ async def register_registration_handlers(dp):
         if existing:
             await event.message.answer(
                 "Вы уже зарегистрированы!",
-                attachments=[registered_keyboard()],
+                attachments=[registered_keyboard(
+                    survey_completed=existing.survey_completed,
+                    survey_draft=existing.survey_draft,
+                )],
             )
             return
 
@@ -93,16 +97,28 @@ async def register_registration_handlers(dp):
 
         await event.bot.send_message(
             user_id=user_id,
-            text=registration_complete_message(registration_pct),
-            attachments=[registered_keyboard()],
+            text=registration_complete_message(registration_pct, cfg.survey_coupon_value),
+            attachments=[registered_keyboard(survey_completed=False, survey_draft=None)],
         )
 
-        try:
-            sended = await event.bot.send_message(
-                user_id=user_id,
-                text=survey_offer_message(),
-                attachments=[survey_offer_keyboard()],
-            )
-            await context.update_data(survey_offer_mid=sended.message.body.mid)
-        except Exception:
-            logger.debug("Could not store survey offer message id")
+    @dp.message_created(F.message.body.text == FILL_SURVEY_BTN_TEXT)
+    async def on_fill_survey_button(
+        event: MessageCreated, context: MemoryContext, route: str = "registration"
+    ):
+        if route != "customer":
+            return
+        from src.handlers.callbacks.survey import handle_survey_callback
+        user_id = event.message.sender.user_id
+        state = await context.get_state()
+        await handle_survey_callback(event.bot, user_id, state, "survey:start", context)
+
+    @dp.message_created(F.message.body.text == CONTINUE_SURVEY_BTN_TEXT)
+    async def on_continue_survey_button(
+        event: MessageCreated, context: MemoryContext, route: str = "registration"
+    ):
+        if route != "customer":
+            return
+        from src.handlers.callbacks.survey import handle_survey_callback
+        user_id = event.message.sender.user_id
+        state = await context.get_state()
+        await handle_survey_callback(event.bot, user_id, state, "survey:resume", context)

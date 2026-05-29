@@ -44,13 +44,6 @@ async def handle_survey_callback(
             cust = await customer_model.get_by_max_id(session, user_id)
         if not cust:
             return True
-        data = await context.get_data()
-        mid = data.get("survey_offer_mid")
-        if mid:
-            try:
-                await bot.delete_message(message_id=mid)
-            except Exception:
-                pass
         if cust.survey_completed:
             async with get_session_factory()() as session:
                 children = await child_model.get_by_customer(session, cust.id)
@@ -128,17 +121,7 @@ async def handle_survey_callback(
                     await customer_model.clear_survey_draft(session, user_id)
         except Exception:
             logger.warning("Failed to clear survey draft on cancel for user %s", user_id)
-        await bot.send_message(user_id=user_id, text="Главное меню.", attachments=[registered_keyboard()])
-        return True
-
-    if payload == "survey:skip":
-        data = await context.get_data()
-        mid = data.get("survey_offer_mid")
-        if mid:
-            try:
-                await bot.delete_message(message_id=mid)
-            except Exception:
-                pass
+        await bot.send_message(user_id=user_id, text="Главное меню.", attachments=[registered_keyboard(survey_completed=False, survey_draft=None)])
         return True
 
     if payload == "skip":
@@ -392,7 +375,7 @@ async def _complete_survey(bot, user_id: int, context: MemoryContext) -> None:
     await bot.send_message(
         user_id=user_id,
         text="Анкета заполнена! Спасибо 🎉",
-        attachments=[registered_keyboard()],
+        attachments=[registered_keyboard(survey_completed=True)],
     )
     if survey_coupon is not None:
         try:
