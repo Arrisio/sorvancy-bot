@@ -26,7 +26,7 @@ async def create_survey_coupon(
     session: AsyncSession,
     customer_id: int,
     value: int,
-    max_pct: int,
+    min_purchase: int,
     valid_days: int,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
@@ -37,7 +37,7 @@ async def create_survey_coupon(
         type="anket",
         display_name=display_name,
         value=value,
-        max_payment_pct=max_pct,
+        min_purchase_amount=min_purchase,
         valid_until=valid_until,
         status="active",
     )
@@ -52,7 +52,7 @@ async def create_seller_coupon(
     customer_id: int,
     value: int,
     validity_days: int,
-    max_payment_pct: int,
+    min_purchase_amount: int,
     display_name: str,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
@@ -61,7 +61,7 @@ async def create_seller_coupon(
         type="seller",
         display_name=display_name,
         value=value,
-        max_payment_pct=max_payment_pct,
+        min_purchase_amount=min_purchase_amount,
         valid_until=now + timedelta(days=validity_days),
         status="active",
     )
@@ -76,7 +76,7 @@ async def create_birthday_coupon(
     customer_id: int,
     value: int,
     valid_days: int,
-    max_payment_pct: int = 100,
+    min_purchase: int = 0,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
     valid_until = now + timedelta(days=valid_days)
@@ -86,7 +86,7 @@ async def create_birthday_coupon(
         type="birthday",
         display_name=display_name,
         value=value,
-        max_payment_pct=max_payment_pct,
+        min_purchase_amount=min_purchase,
         valid_until=valid_until,
         status="active",
     )
@@ -101,7 +101,7 @@ async def create_broadcast_coupon(
     customer_id: int,
     value: int,
     validity_days: int,
-    max_payment_pct: int,
+    min_purchase_amount: int,
     display_name: str,
 ) -> Coupon:
     now = datetime.now(tz=timezone.utc)
@@ -110,7 +110,7 @@ async def create_broadcast_coupon(
         type="broadcast",
         display_name=display_name,
         value=value,
-        max_payment_pct=max_payment_pct,
+        min_purchase_amount=min_purchase_amount,
         valid_until=now + timedelta(days=validity_days),
         status="active",
     )

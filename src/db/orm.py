@@ -95,7 +95,7 @@ class Coupon(Base):
     type: Mapped[str] = mapped_column(Text, nullable=False)
     display_name: Mapped[str] = mapped_column(Text, nullable=False)
     value: Mapped[int] = mapped_column(Integer, nullable=False)
-    max_payment_pct: Mapped[int] = mapped_column(Integer, nullable=False)
+    min_purchase_amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     valid_until: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(
@@ -118,8 +118,8 @@ class FinancialConfig(Base):
     survey_coupon_valid_days: Mapped[int] = mapped_column(
         Integer, nullable=False, default=30, server_default="30"
     )
-    survey_coupon_max_pct: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=30, server_default="30"
+    survey_coupon_min_purchase: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
     )
     birthday_coupon_value: Mapped[int] = mapped_column(
         Integer, nullable=False, default=300, server_default="300"
@@ -127,8 +127,8 @@ class FinancialConfig(Base):
     birthday_coupon_valid_days: Mapped[int] = mapped_column(
         Integer, nullable=False, default=7, server_default="7"
     )
-    birthday_coupon_max_pct: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=30, server_default="30"
+    birthday_coupon_min_purchase: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
     )
 
 
@@ -155,7 +155,7 @@ class Broadcast(Base):
     )
     coupon_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coupon_validity_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    coupon_max_payment_pct: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    coupon_min_purchase_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
     coupon_display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     creator: Mapped["Staff"] = relationship(back_populates="broadcasts")

@@ -17,7 +17,7 @@ async def create(
     status: str = "pending",
     coupon_value: int | None = None,
     coupon_validity_days: int | None = None,
-    coupon_max_payment_pct: int | None = None,
+    coupon_min_purchase_amount: int | None = None,
     coupon_display_name: str | None = None,
 ) -> Broadcast:
     broadcast = Broadcast(
@@ -29,7 +29,7 @@ async def create(
         recipient_count=recipient_count,
         coupon_value=coupon_value,
         coupon_validity_days=coupon_validity_days,
-        coupon_max_payment_pct=coupon_max_payment_pct,
+        coupon_min_purchase_amount=coupon_min_purchase_amount,
         coupon_display_name=coupon_display_name,
     )
     session.add(broadcast)

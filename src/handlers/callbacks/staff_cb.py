@@ -270,7 +270,7 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         await context.set_state(StaffState.AWAITING_COUPON_VALUE)
         await bot.send_message(
             user_id=user_id,
-            text="Введите максимальную сумму купона (в рублях, 100–5000):",
+            text="Введите или выберите сумму купона (в руб., 100–5000):",
             attachments=[coupon_value_keyboard()],
         )
         return
@@ -313,7 +313,7 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         await context.set_state(StaffState.AWAITING_COUPON_VALUE)
         sent = await bot.send_message(
             user_id=user_id,
-            text="Введите максимальную сумму купона (в рублях, 100–5000):",
+            text="Введите или веберите сумму купона (в руб., 100–5000):",
             attachments=[coupon_value_keyboard()],
         )
         await _append_step_mid(context, sent.message.body.mid)

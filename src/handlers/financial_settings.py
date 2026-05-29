@@ -22,11 +22,11 @@ def financial_summary_text(cfg) -> str:
         "🎁 Купон за анкету\n"
         f"Сумма: {cfg.survey_coupon_value} ₽ · "
         f"Срок: {cfg.survey_coupon_valid_days} дн · "
-        f"Макс. % от покупки: {cfg.survey_coupon_max_pct}%\n\n"
+        f"Мин. сумма покупки: {cfg.survey_coupon_min_purchase} ₽\n\n"
         "🎂 Купон на день рождения\n"
         f"Сумма: {cfg.birthday_coupon_value} ₽ · "
         f"Срок: {cfg.birthday_coupon_valid_days} дн · "
-        f"Макс. % от покупки: {cfg.birthday_coupon_max_pct}%"
+        f"Мин. сумма покупки: {cfg.birthday_coupon_min_purchase} ₽"
     )
 
 

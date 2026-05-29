@@ -16,7 +16,7 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 
 ## Main flow
 
-1. Bot sends: «Введите максимальную сумму купона (в рублях, 100–5000):» + buttons [300] [500] [1000] [Отмена] in one row.
+1. Bot sends: «Введите или выберите сумму купона (в руб., 100–5000):» + buttons [300] [500] [1000] [Отмена] in one row.
 2. Operator types integer 100–5000 **or** taps quick-value button → `coupon_draft.value`.
 3. Bot sends: «Срок действия купона (в днях, минимум 7):» + buttons [7] [14] [30] [60] [Отмена] in one row.
 4. Operator types integer ≥ 7 **or** taps quick-value button → `coupon_draft.validity_days`.

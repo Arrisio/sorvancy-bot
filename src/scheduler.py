@@ -84,7 +84,7 @@ async def _deliver_broadcast(bot, broadcast) -> None:
                             customer_id=recipient.customer.id,
                             value=broadcast.coupon_value,
                             validity_days=broadcast.coupon_validity_days,
-                            max_payment_pct=broadcast.coupon_max_payment_pct,
+                            min_purchase_amount=broadcast.coupon_min_purchase_amount or 0,
                             display_name=broadcast.coupon_display_name or f"{broadcast.coupon_value} ₽",
                         )
                 await bot.send_message(
@@ -206,7 +206,7 @@ async def _run_birthday_reminders(bot) -> None:
                         customer_id=cust.id,
                         value=cfg.birthday_coupon_value,
                         valid_days=cfg.birthday_coupon_valid_days,
-                        max_payment_pct=cfg.birthday_coupon_max_pct,
+                        min_purchase=cfg.birthday_coupon_min_purchase,
                     )
                     await child_model.set_birthday_reminded_year(session, child.id, target_year)
 
@@ -246,7 +246,7 @@ async def _run_birthday_reminders(bot) -> None:
                         customer_id=cust.id,
                         value=cfg.birthday_coupon_value,
                         valid_days=cfg.birthday_coupon_valid_days,
-                        max_payment_pct=cfg.birthday_coupon_max_pct,
+                        min_purchase=cfg.birthday_coupon_min_purchase,
                     )
                     await customer_model.set_birthday_reminded_year(session, cust.id, target_year)
 
