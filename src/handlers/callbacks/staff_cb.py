@@ -21,7 +21,7 @@ from src.models import coupon as coupon_model
 from src.models import staff as staff_model
 from src.models import broadcast as broadcast_model
 from src.handlers.staff import _send_customer_profile_by_id
-from src.handlers.broadcast import _create_broadcast, _nearest_window_slot, _tomorrow_window_slot, _ask_broadcast_recipients, _ask_broadcast_comment
+from src.handlers.broadcast import _create_broadcast, _nearest_window_slot, _tomorrow_window_slot, _ask_broadcast_recipients, _ask_broadcast_schedule, _ask_broadcast_comment
 from src.handlers.callbacks._common import _delete_step_mids, _append_step_mid, _display_name
 from src.handlers.callbacks.financial_cb import handle_financial_callback
 from src.handlers.text_router import (
@@ -323,6 +323,14 @@ async def handle_staff_callback(event, context: MemoryContext, staff, state: str
         if state != StaffState.AWAITING_BROADCAST_COUPON_CHOICE:
             return
         await _ask_broadcast_recipients(bot, user_id, context)
+        return
+
+    if payload == "broadcast:send_to_all":
+        if state != StaffState.AWAITING_BROADCAST_RECIPIENTS:
+            return
+        async with get_session_factory()() as session:
+            eligible = await broadcast_model.get_eligible_customer_ids(session)
+        await _ask_broadcast_schedule(bot, user_id, context, eligible)
         return
 
     if payload == "broadcast:cancel_create":

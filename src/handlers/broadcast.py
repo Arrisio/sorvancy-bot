@@ -16,6 +16,7 @@ from src.states import StaffState, RegistrationState
 from src.keyboards import (
     broadcast_start_keyboard,
     broadcast_coupon_choice_keyboard,
+    broadcast_recipients_keyboard,
     broadcast_comment_keyboard,
     cancel_broadcast_keyboard,
     cancel_keyboard,
@@ -91,10 +92,10 @@ async def register_broadcast_handlers(dp):
             return
         for b in pending:
             dt = b.scheduled_at.strftime("%d.%m.%Y %H:%M")
-            await event.message.answer(
-                f"Рассылка #{b.id}\nПолучателей: {b.recipient_count}\nЗапуск: {dt}",
-                attachments=[cancel_broadcast_keyboard(b.id)],
-            )
+            text = f"Рассылка #{b.id}\nПолучателей: {b.recipient_count}\nЗапуск: {dt}"
+            if b.comment:
+                text += f"\nКомментарий: {b.comment}"
+            await event.message.answer(text, attachments=[cancel_broadcast_keyboard(b.id)])
 
 
 async def _save_broadcast_source(event, context) -> None:
@@ -119,7 +120,24 @@ async def _ask_broadcast_recipients(bot, user_id: int, context) -> None:
     sent = await bot.send_message(
         user_id=user_id,
         text="Шаг 3 из 5 · Пришлите номера клиентов для рассылки (через запятую или с новой строки):",
-        attachments=[cancel_keyboard("broadcast:cancel_create")],
+        attachments=[broadcast_recipients_keyboard()],
+    )
+    await _append_step_mid(context, sent.message.body.mid)
+
+
+async def _ask_broadcast_schedule(bot, user_id: int, context, eligible_ids: list[int]) -> None:
+    await context.update_data(broadcast_recipient_ids=eligible_ids)
+    await context.set_state(StaffState.AWAITING_BROADCAST_TIME)
+    sent = await bot.send_message(
+        user_id=user_id,
+        text=(
+            f"Шаг 4 из 5 · Создана рассылка на {len(eligible_ids)} получателей. Когда её начать?\n"
+            f"Окно рассылки: {config.BROADCAST_WINDOW_START_HOUR}:00–{config.BROADCAST_WINDOW_END_HOUR}:00.\n"
+            "Укажите дату или воспользуйтесь кнопками:\n"
+            f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
+            "  • «25.06 14:30» — 25 июня в 14:30"
+        ),
+        attachments=[broadcast_start_keyboard()],
     )
     await _append_step_mid(context, sent.message.body.mid)
 

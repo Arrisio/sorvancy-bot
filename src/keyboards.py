@@ -375,6 +375,15 @@ def broadcast_cancel_confirm_keyboard():
     return builder.as_markup()
 
 
+def broadcast_recipients_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        CallbackButton(text="Отправить всем", payload="broadcast:send_to_all"),
+        CallbackButton(text="Отмена", payload="broadcast:cancel_create"),
+    )
+    return builder.as_markup()
+
+
 def broadcast_comment_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(

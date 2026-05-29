@@ -38,6 +38,7 @@ from src.keyboards import (
     children_list_keyboard,
     cancel_keyboard,
     broadcast_start_keyboard,
+    broadcast_recipients_keyboard,
     child_card_keyboard,
     coupon_display_name_keyboard,
     coupon_value_keyboard,
@@ -48,7 +49,7 @@ from src.keyboards import (
 import config
 from src.handlers.registration import _format_confirmation, _parse_int_list
 from src.handlers.profile import _profile_text, _child_text
-from src.handlers.broadcast import _create_broadcast, _in_window, _ask_broadcast_recipients, _save_broadcast_source, _ask_broadcast_comment
+from src.handlers.broadcast import _create_broadcast, _in_window, _ask_broadcast_recipients, _ask_broadcast_schedule, _save_broadcast_source, _ask_broadcast_comment
 from src.utils.dates import parse_birthday, parse_broadcast_dt
 from src.handlers.staff import _send_customer_profile_by_id
 from src.handlers.callbacks._common import _persist_survey_draft, _append_step_mid, _delete_step_mids, _send_step
@@ -211,23 +212,13 @@ async def _handle_staff_text(event, context, staff, state, text, user_id):
                 await _send_step(
                     bot, user_id, context,
                     "Не удалось разобрать список ID. Попробуйте ещё раз.\n"
-                    "Шаг 3 из 4 · Пришлите номера клиентов (через запятую или с новой строки):",
-                    cancel_keyboard("broadcast:cancel_create"),
+                    "Шаг 3 из 5 · Пришлите номера клиентов (через запятую или с новой строки):",
+                    broadcast_recipients_keyboard(),
                 )
                 return
             async with get_session_factory()() as session:
                 eligible = await broadcast_model.get_eligible_customer_ids(session, ids)
-            await context.update_data(broadcast_recipient_ids=eligible)
-            await context.set_state(StaffState.AWAITING_BROADCAST_TIME)
-            await _send_step(
-                bot, user_id, context,
-                f"Шаг 4 из 4 · Создана рассылка на {len(eligible)} получателей. Когда её начать?\n"
-                f"Окно рассылки: {config.BROADCAST_WINDOW_START_HOUR}:00–{config.BROADCAST_WINDOW_END_HOUR}:00.\n"
-                "Укажите дату или воспользуйтесь кнопками:\n"
-                f"  • «25.06» — 25 июня в {config.BROADCAST_WINDOW_START_HOUR}:00\n"
-                "  • «25.06 14:30» — 25 июня в 14:30",
-                broadcast_start_keyboard(),
-            )
+            await _ask_broadcast_schedule(bot, user_id, context, eligible)
             return
 
         if state == StaffState.AWAITING_BROADCAST_TIME:
