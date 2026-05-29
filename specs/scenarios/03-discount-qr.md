@@ -24,13 +24,14 @@ User clicks «🎁 Скидка и купоны» button.
    Скидка: {customer.discount_percent}%
 
    Ваши купоны:
-   🎁 {coupon.display_name}
+   🎁 {coupon.display_name} (от {coupon.min_purchase_amount} ₽)
    🎁 {coupon.display_name}
    …
 
    Если QR не считывается — отправьте ссылку:
    {deeplink_url}
    ```
+   `(от {N} ₽)` shown only when `coupon.min_purchase_amount > 0`; omitted when 0.
    Coupon section omitted if no active coupons. If >20 coupons, show first 20, append «…и ещё N» (style guide §8).
 4. User shows QR (or shares link) to seller; seller scans/opens → scenario 06 triggers
 

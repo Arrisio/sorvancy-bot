@@ -60,7 +60,7 @@ One base row per Customer. If Customer has multiple children, expands into one s
 | Customer.opt_out_marketing | «Да» / «Нет» |
 | Customer.survey_completed | «Да» / «Нет» |
 | Coupon valid_until | `DD.MM.YYYY HH:MM` |
-| Coupon line format | `[type] — [value] ₽, до [valid_until]` |
+| Coupon line format | `[type] — [value] ₽, до [valid_until]` (`, от [min_purchase_amount] ₽` appended when `min_purchase_amount > 0`) |
 
 Active coupon filter: `status = active` AND `valid_until > now()`.
 Zero coupons: cell empty.

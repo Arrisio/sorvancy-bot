@@ -23,8 +23,11 @@ Superuser clicks «Запланированные рассылки» button.
    Получателей: {recipient_count}
    Запуск: {DD.MM.YYYY HH:MM}
    Комментарий: {comment}
+   Купон: {coupon_display_name} — {coupon_value} ₽, срок {coupon_validity_days} дн.{, от {coupon_min_purchase_amount} ₽}
    ```
-   `Комментарий:` line shown only if `comment` is not null. Each message includes inline button [Отменить].
+   `Комментарий:` line shown only if `comment` is not null.
+   `Купон:` section shown only if coupon template attached (`coupon_value IS NOT NULL`). `, от {N} ₽` shown only when `coupon_min_purchase_amount > 0`.
+   Each message includes inline button [Отменить].
 4. Superuser clicks [Отменить] on a broadcast
 5. Bot sets Broadcast status → `cancelled`; bot sends: «Рассылка отмечена как "Отменена"»; bot sends `superuser_keyboard`
 
