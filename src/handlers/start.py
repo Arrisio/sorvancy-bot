@@ -205,7 +205,12 @@ async def _send_discount_qr(bot, user_id: int):
     coupon_block = ""
     if coupons:
         shown = coupons[:20]
-        lines = "\n".join(f"🎁 {c.display_name}" for c in shown)
+        def _coupon_line(c) -> str:
+            line = f"🎁 {c.display_name}"
+            if c.min_purchase_amount and c.min_purchase_amount > 0:
+                line += f" (от {c.min_purchase_amount} ₽)"
+            return line
+        lines = "\n".join(_coupon_line(c) for c in shown)
         tail = f"\n…и ещё {len(coupons) - 20}" if len(coupons) > 20 else ""
         coupon_block = f"\nВаши купоны:\n{lines}{tail}\n"
     text = (

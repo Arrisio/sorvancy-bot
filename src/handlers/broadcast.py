@@ -95,6 +95,11 @@ async def register_broadcast_handlers(dp):
             text = f"Рассылка #{b.id}\nПолучателей: {b.recipient_count}\nЗапуск: {dt}"
             if b.comment:
                 text += f"\nКомментарий: {b.comment}"
+            if b.coupon_value is not None:
+                coupon_line = f"\nКупон: {b.coupon_display_name} — {b.coupon_value} ₽, срок {b.coupon_validity_days} дн."
+                if b.coupon_min_purchase_amount and b.coupon_min_purchase_amount > 0:
+                    coupon_line += f", от {b.coupon_min_purchase_amount} ₽"
+                text += coupon_line
             await event.message.answer(text, attachments=[cancel_broadcast_keyboard(b.id)])
 
 

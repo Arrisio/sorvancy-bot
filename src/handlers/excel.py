@@ -97,7 +97,10 @@ async def _generate_excel() -> bytes:
         coupon_lines = []
         for cp in coupons:
             until = cp.valid_until.strftime("%d.%m.%Y %H:%M")
-            coupon_lines.append(f"{cp.type} — {cp.value} ₽, до {until}")
+            line = f"{cp.type} — {cp.value} ₽, до {until}"
+            if cp.min_purchase_amount and cp.min_purchase_amount > 0:
+                line += f", от {cp.min_purchase_amount} ₽"
+            coupon_lines.append(line)
         coupon_cell = "\n".join(coupon_lines) if coupon_lines else ""
 
         bd_str = cust.birthdate.strftime("%d.%m.%Y") if cust.birthdate else ""
