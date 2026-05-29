@@ -23,7 +23,8 @@ Bot records message ID of each prompt in `step_mids` (MemoryContext); all delete
 4. Bot saves reference to original message (will be forwarded to each recipient via Forward — not re-sent as new message; attachments preserved automatically); sends: «Добавить купон к рассылке?» + buttons [Добавить] [Пропустить]
    - Superuser clicks [Добавить] → Bot runs sub-scenario 21 (Coupon Input); stores `coupon_draft = {value, validity_days, min_purchase_amount, display_name}` in broadcast context; proceeds to step 5.
    - Superuser clicks [Пропустить] → proceeds to step 5 with no coupon attached.
-5. Bot sends: «Пришлите номера клиентов для рассылки» + button [Отмена]
+5. Bot sends: «Пришлите номера клиентов для рассылки (через запятую или с новой строки)» + buttons [Отправить всем] [Отмена]
+   - Superuser clicks [Отправить всем] → Bot fetches all customers with `opt_out_marketing = false`; sets recipient list to full eligible set; skips to step 8.
 6. Superuser sends recipient list as text — Customer IDs separated by any delimiter (whitespace, comma, semicolon); split on any non-digit character
 7. Bot resolves recipient list: deduplicates customer IDs in-memory (owner may submit same ID twice); excludes customers with `opt_out_marketing = true`
 8. Bot sends: «Создана рассылка на {количество} получателей. Когда её начать? Окно рассылки: {BROADCAST_WINDOW_START_HOUR}:00–{BROADCAST_WINDOW_END_HOUR}:00.» + buttons [Начать в ближайшее время] [Завтра] [Отмена]
