@@ -72,7 +72,7 @@ async def handle_survey_callback(
         await context.set_state(RegistrationState.AWAITING_FIRST_NAME)
         await _persist_survey_draft(context, user_id)
         await _send_step(bot, user_id, context,
-            "Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
+            "Шаг 1 из 4 · Как к вам обращаться? Введите имя или имя и отчество:",
             cancel_keyboard("survey:cancel"))
         return True
 
@@ -84,7 +84,7 @@ async def handle_survey_callback(
             await context.set_state(RegistrationState.AWAITING_FIRST_NAME)
             await _persist_survey_draft(context, user_id)
             await _send_step(bot, user_id, context,
-                "Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
+                "Шаг 1 из 4 · Как к вам обращаться? Введите имя или имя и отчество:",
                 cancel_keyboard("survey:cancel"))
             return True
         draft = cust.survey_draft
@@ -114,7 +114,7 @@ async def handle_survey_callback(
         await context.set_state(RegistrationState.AWAITING_FIRST_NAME)
         await _persist_survey_draft(context, user_id)
         await _send_step(bot, user_id, context,
-            "Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
+            "Шаг 1 из 4 · Как к вам обращаться? Введите имя или имя и отчество:",
             cancel_keyboard("survey:cancel"))
         return True
 
@@ -229,7 +229,7 @@ async def _resend_survey_step(bot, user_id: int, state: str, context: MemoryCont
 
     if state == RegistrationState.AWAITING_FIRST_NAME:
         await _send_step(bot, user_id, context,
-            "Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:",
+            "Шаг 1 из 4 · Как к вам обращаться? Введите имя или имя и отчество:",
             cancel_keyboard("survey:cancel"))
     elif state == RegistrationState.AWAITING_LAST_NAME:
         await _send_step(bot, user_id, context,
