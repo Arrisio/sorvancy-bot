@@ -32,7 +32,7 @@ Bot records message ID of each question in `step_mids` (MemoryContext) as steps 
 
 | Step | State | Bot sends | User action |
 |------|-------|----------|-------------|
-| 1 | REGISTERED | Delete survey offer message. Set AWAITING_NAME. «Шаг 1 из 4 · Как вас зовут? Введите имя или имя и отчество:» + [Отмена] | Types name or clicks Отмена |
+| 1 | REGISTERED | Delete survey offer message. Set AWAITING_NAME. «Шаг 1 из 4 · Как к вам обращаться? Введите имя или имя и отчество:» + [Отмена] | Types name or clicks Отмена |
 | 2 | AWAITING_NAME | Store `draft.first_name`. Set AWAITING_LAST_NAME. «Шаг 2 из 4 · Расскажите свою фамилию — поможет при официальном обращении. Можно пропустить 😊» + [Пропустить] [← Назад] | Types or skips |
 | 3 | AWAITING_LAST_NAME | Store `draft.last_name` (null if skipped). Set AWAITING_CUSTOMER_BIRTHDATE. «Шаг 3 из 4 · Когда ваш день рождения? Обязательно поздравим! 🎂\nПример: 12.05.90 или 12.05.1990» + [Пропустить] [← Назад] | Types or skips |
 | 4 | AWAITING_CUSTOMER_BIRTHDATE | Store `draft.birthdate` (null if skipped). Set AWAITING_CHILD_NAME. «Шаг 4 из 4 · Как зовут вашего ребёнка?» + (if 0 children in draft: [Покупаю для себя]) + [← Назад] | Types name or clicks Покупаю для себя |
