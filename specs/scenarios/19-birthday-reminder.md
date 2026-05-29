@@ -26,7 +26,7 @@ Daily scheduled job fires at `BROADCAST_WINDOW_START_HOUR` (default 10:00) Yekat
 3. Skip child if `Child.birthday_reminded_year = year_of(today + 3 days)` — already reminded this year
 4. For each remaining child: load parent Customer
 5. Decline child's name to Russian genitive case (e.g. «Маша» → «Маши», «Дима» → «Димы»); uses Russian morphology library (pymorphy2 or equivalent)
-6. Issue coupon to Customer: type=`birthday`, value=`FinancialConfig.birthday_coupon_value`, max_payment_pct=`FinancialConfig.birthday_coupon_max_pct`, valid_until=now()+`FinancialConfig.birthday_coupon_valid_days` days, display_name=`"ДР: {value} ₽ до {ДД.ММ.ГГ}"`
+6. Issue coupon to Customer: type=`birthday`, value=`FinancialConfig.birthday_coupon_value`, min_purchase_amount=`FinancialConfig.birthday_coupon_min_purchase`, valid_until=now()+`FinancialConfig.birthday_coupon_valid_days` days, display_name=`"ДР: {value} ₽ до {ДД.ММ.ГГ}"`
 7. Send message to Customer:
    «У [имя в родительном падеже] через три дня день рождения. Вот вам купон на скидку — [birthday_coupon_value] руб., действителен до [дата].»
 8. Set Child.birthday_reminded_year = year_of(today + 3 days)
@@ -43,7 +43,7 @@ Daily scheduled job fires at `BROADCAST_WINDOW_START_HOUR` (default 10:00) Yekat
 ### Steps
 1. Job queries Customers where birthdate IS NOT NULL AND month+day of birthdate = month+day of (today + 3 days)
 2. Skip customer if `Customer.birthday_reminded_year = year_of(today + 3 days)` — already reminded this year
-3. Issue coupon to Customer: same params as Flow A — type=`birthday`, value=`FinancialConfig.birthday_coupon_value`, max_payment_pct=`FinancialConfig.birthday_coupon_max_pct`, valid_until=now()+`FinancialConfig.birthday_coupon_valid_days` days, display_name=`"ДР: {value} ₽ до {ДД.ММ.ГГ}"`
+3. Issue coupon to Customer: same params as Flow A — type=`birthday`, value=`FinancialConfig.birthday_coupon_value`, min_purchase_amount=`FinancialConfig.birthday_coupon_min_purchase`, valid_until=now()+`FinancialConfig.birthday_coupon_valid_days` days, display_name=`"ДР: {value} ₽ до {ДД.ММ.ГГ}"`
 4. Send message to Customer:
 
    «🎂 [Имя], через три дня — ваш день рождения!
@@ -67,7 +67,7 @@ Read from `FinancialConfig` at issuance time (scenario 22). Same config fields u
 |-------|---------|
 | `birthday_coupon_value` | 300 |
 | `birthday_coupon_valid_days` | 7 |
-| `birthday_coupon_max_pct` | 30 |
+| `birthday_coupon_min_purchase` | 0 |
 
 ---
 
@@ -97,6 +97,6 @@ Read from `FinancialConfig` at issuance time (scenario 22). Same config fields u
 - pii.md
 
 ## Open questions
-- [x] `birthday_coupon_max_pct` default: 30%. RESOLVED.
+- ~~`birthday_coupon_max_pct` default: 30%. RESOLVED — field replaced by `birthday_coupon_min_purchase`.~~
 - [ ] `Customer.birthday_reminded_year` field not in ORM or DB schema. Migration needed.
 - [x] Flow A and Flow B run as single job or two separate jobs? RESOLVED: single job; Flow A first, then Flow B. UX degradation (two messages in quick succession) acceptable.

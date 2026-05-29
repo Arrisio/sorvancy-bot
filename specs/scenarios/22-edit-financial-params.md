@@ -27,10 +27,10 @@ Bot sends **financial summary message** (inline keyboard):
 Скидка при регистрации: [X]%
 
 🎁 Купон за анкету
-Сумма: [X] ₽ · Срок: [X] дн · Макс. % от покупки: [X]%
+Сумма: [X] ₽ · Срок: [X] дн · Мин. сумма покупки: [X] ₽
 
 🎂 Купон на день рождения
-Сумма: [X] ₽ · Срок: [X] дн · Макс. % от покупки: [X]%
+Сумма: [X] ₽ · Срок: [X] дн · Мин. сумма покупки: [X] ₽
 ```
 
 Inline buttons:
@@ -48,12 +48,12 @@ Bot **edits summary message** to coupon card for selected coupon type:
 🎂 Купон на день рождения        (or 🎁 Купон за анкету)
 Сумма: [X] ₽
 Срок действия: [X] дней
-Макс. % от покупки: [X]%
+Мин. сумма покупки: [X] ₽
 ```
 
 Inline buttons:
 ```
-[✏️ Сумма]  [✏️ Срок]  [✏️ % от покупки]
+[✏️ Сумма]  [✏️ Срок]  [✏️ Мин. сумма]
 [← Назад]
 ```
 
@@ -73,10 +73,10 @@ Owner taps any [✏️ …] button (on summary screen or coupon card):
 | `registration_discount_pct` | «Введите новое значение скидки при регистрации (1–100):\nСейчас: X%» (X — текущее значение из БД) |
 | `survey_coupon_value` | «Введите сумму купона за анкету (целое число ₽, > 0):» |
 | `survey_coupon_valid_days` | «Введите срок действия купона за анкету (целое число дней, > 0):» |
-| `survey_coupon_max_pct` | «Введите макс. % от покупки для купона за анкету (1–100):» |
+| `survey_coupon_min_purchase` | «Введите минимальную сумму покупки для купона за анкету (₽, 0 = без ограничения):» |
 | `birthday_coupon_value` | «Введите сумму купона на день рождения (целое число ₽, > 0):» |
 | `birthday_coupon_valid_days` | «Введите срок действия купона на день рождения (целое число дней, > 0):» |
-| `birthday_coupon_max_pct` | «Введите макс. % от покупки для купона на день рождения (1–100):» |
+| `birthday_coupon_min_purchase` | «Введите минимальную сумму покупки для купона на день рождения (₽, 0 = без ограничения):» |
 
 5. Owner enters value → validated → FinancialConfig updated in DB
 6. Bot deletes prompt message
@@ -101,7 +101,7 @@ Owner taps [← Назад] on coupon card → bot **edits message** back to sum
 - `registration_discount_pct` outside [1, 100]: «Введите число от 1 до 100.»
 - `*_value` ≤ 0: «Сумма должна быть больше 0.»
 - `*_valid_days` ≤ 0: «Срок должен быть больше 0.»
-- `*_max_pct` outside [1, 100]: «Введите процент от 1 до 100.»
+- `*_min_purchase` < 0: «Введите целое число от 0 и выше.»
 - State unchanged; owner retries.
 
 ### N3: DB write fails

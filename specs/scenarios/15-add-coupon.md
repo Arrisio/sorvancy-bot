@@ -21,14 +21,14 @@ Customer receives new coupon and notification of issuance.
 ### Flow A — Automated (survey completion)
 
 1. Scenario 02 completes with survey_completed False → True; sends «Анкета заполнена! Спасибо 🎉».
-2. Bot creates Coupon: `type=anket`, `value=FinancialConfig.survey_coupon_value`, `max_payment_pct=FinancialConfig.survey_coupon_max_pct`, `valid_until=now()+FinancialConfig.survey_coupon_valid_days days`, `display_name="Бонус {value} ₽ до {ДД.ММ.ГГ}"`.
+2. Bot creates Coupon: `type=anket`, `value=FinancialConfig.survey_coupon_value`, `min_purchase_amount=FinancialConfig.survey_coupon_min_purchase`, `valid_until=now()+FinancialConfig.survey_coupon_valid_days days`, `display_name="Бонус {value} ₽ до {ДД.ММ.ГГ}"`.
 3. Bot sends customer notification (see Notification section).
 
 ### Flow B — Seller-initiated
 
 1. Seller clicks «Выдать купон» on customer profile.
 2. Bot sends: «Выдаёте купон клиенту [first_name] [last_name].» + button [Отмена]
-3. Bot runs sub-scenario 21 (Coupon Input) → collects `coupon_draft = {value, validity_days, max_payment_pct, display_name}`.
+3. Bot runs sub-scenario 21 (Coupon Input) → collects `coupon_draft = {value, validity_days, min_purchase_amount, display_name}`.
    - On cancellation → A1.
 4. Bot saves Coupon: `type=seller`; `valid_until = now() + coupon_draft.validity_days days`; `display_name = coupon_draft.display_name`.
 5. Bot sends customer notification (see Notification section).

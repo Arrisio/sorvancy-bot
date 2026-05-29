@@ -20,8 +20,8 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 2. Operator types integer 100–5000 **or** taps quick-value button → `coupon_draft.value`.
 3. Bot sends: «Срок действия купона (в днях, минимум 7):» + buttons [7] [14] [30] [60] [Отмена] in one row.
 4. Operator types integer ≥ 7 **or** taps quick-value button → `coupon_draft.validity_days`.
-5. Bot sends: «Введите % суммы покупки, которые можно оплатить купоном (1–100%):» + buttons [30] [50] [70] [Отмена] in one row.
-6. Operator types integer 1–100 **or** taps quick-value button → `coupon_draft.max_payment_pct`.
+5. Bot sends: «Выберите минимальную сумму покупки для применения купона (в руб.) или введите своё значение:» + buttons [1000] [2000] [Отмена] in one row.
+6. Operator taps [1000] or [2000] **or** types integer ≥ 0 → `coupon_draft.min_purchase_amount`.
 7. Bot computes suggested default display name: `"{value} ₽ до {ДД.ММ.ГГ}"` where date = today + `validity_days`.
    Bot sends: «Название купона в кнопке (видит покупатель, макс. 40 символов). Предложение: «{suggested}». Введите своё или примите предложенное.» + buttons [Принять] [Отмена]
 8. Operator clicks [Принять] → `coupon_draft.display_name = suggested`; OR operator types text (≤ 40 chars) → `coupon_draft.display_name = typed_text`.
@@ -46,8 +46,8 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 - Bot: «Срок должен быть не менее 7 дней.»
 - Operator retries step 4.
 
-### N4: `max_payment_pct` out of range (<1 or >100)
-- Bot: «Введите процент от 1 до 100.»
+### N4: `min_purchase_amount` is negative
+- Bot: «Введите целое число от 0 и выше.»
 - Operator retries step 6.
 
 ### N5: `display_name` exceeds 40 chars
@@ -55,8 +55,8 @@ Called inline by parent scenario when operator opts to attach or issue a coupon.
 - Operator retries step 8.
 
 ## Postconditions
-- `coupon_draft = {value, validity_days, max_payment_pct, display_name}` returned to parent scenario.
+- `coupon_draft = {value, validity_days, min_purchase_amount, display_name}` returned to parent scenario.
 - No DB writes performed by this sub-scenario.
 
 ## Open questions
-- [x] N4 absent from current scenario 15 implementation — `max_payment_pct` range validation added; UI cap raised to 100 (entity allows 1–100). RESOLVED.
+- ~~Upper bound for `min_purchase_amount`: no limit. RESOLVED.~~

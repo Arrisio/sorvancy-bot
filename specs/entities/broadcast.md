@@ -18,8 +18,9 @@ Mass message forwarded to a filtered set of customers; may be immediate or sched
 | failed_count | int | not null, default 0 | Derived: COUNT(BroadcastRecipient WHERE status=failed) |
 | coupon_value | int | nullable | Coupon template: whole rubles; null means no coupon attached |
 | coupon_validity_days | int | nullable | Coupon template: days from delivery time until expiry |
-| coupon_max_payment_pct | int | nullable | Coupon template: max % of purchase coverable by coupon (1–100) |
+| coupon_min_purchase_amount | int | nullable | Coupon template: minimum purchase total (₽) required to apply coupon; 0 = no minimum |
 | coupon_display_name | text | nullable, max 40 chars | Coupon template: display_name stamped on each issued Coupon at delivery |
+| comment | text | nullable | Internal staff-facing note; not forwarded to recipients |
 
 ## Invariants
 
@@ -27,7 +28,8 @@ Mass message forwarded to a filtered set of customers; may be immediate or sched
 - Status transitions: `pending` → `running` → `completed` | `cancelled`
 - `cancelled` set by superuser via scenario 12 or [Отмена] at scheduling step in scenario 11
 - `sent_count + failed_count ≤ recipient_count`
-- Coupon template fields are all-or-nothing: either all four (`coupon_value`, `coupon_validity_days`, `coupon_max_payment_pct`, `coupon_display_name`) are set, or all are null
+- Coupon template fields are all-or-nothing: either all four (`coupon_value`, `coupon_validity_days`, `coupon_min_purchase_amount`, `coupon_display_name`) are set, or all are null
+- `comment` is independent of coupon fields; may be null regardless of coupon presence
 
 ## Relations
 
@@ -36,5 +38,5 @@ Mass message forwarded to a filtered set of customers; may be immediate or sched
 
 ## Open questions
 
-- [ ] `source_message_id`: also need to store originating `chat_id` for forward API call?
+- ~~`source_message_id`: also need to store originating `chat_id` for forward API call? RESOLVED — `source_chat_id` column added to ORM.~~
 - [ ] Transient retry attempts: counted in `failed_count` only after permanent failure, not per retry?
