@@ -131,6 +131,19 @@ async def broadcast_delivery_loop(bot) -> None:
         await asyncio.sleep(BROADCAST_DELIVERY_INTERVAL)
 
 
+async def _run_due_broadcasts(bot) -> None:
+    async with get_session_factory()() as session:
+        due = await broadcast_model.get_due_pending_broadcasts(session)
+        for b in due:
+            await broadcast_model.set_status_running(session, b.id)
+
+    async with get_session_factory()() as session:
+        running = await broadcast_model.get_running_broadcasts_with_creator(session)
+
+    if running:
+        await asyncio.gather(*[_deliver_broadcast(bot, b) for b in running])
+
+
 async def coupon_expiry_loop() -> None:
     while True:
         try:
