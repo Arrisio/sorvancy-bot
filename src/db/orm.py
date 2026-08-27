@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from sqlalchemy import (
     BigInteger, Boolean, Integer, String, Text, Date, TIMESTAMP,
-    ForeignKey, CheckConstraint, UniqueConstraint, Sequence,
+    ForeignKey, CheckConstraint, UniqueConstraint, Sequence, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -28,7 +28,7 @@ class Customer(Base):
     )
     discount_percent: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     registered_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), server_default="NOW()", nullable=False
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )
     birthday_reminded_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     opt_out_marketing: Mapped[bool] = mapped_column(
@@ -58,7 +58,7 @@ class Child(Base):
     birthdate: Mapped[date | None] = mapped_column(Date, nullable=True)
     birthday_reminded_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), server_default="NOW()", nullable=False
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )
 
     customer: Mapped["Customer"] = relationship(back_populates="children")
@@ -79,7 +79,7 @@ class Staff(Base):
         Boolean, default=False, nullable=False, server_default="false"
     )
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), server_default="NOW()", nullable=False
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )
 
     broadcasts: Mapped[list["Broadcast"]] = relationship(back_populates="creator")
@@ -99,7 +99,7 @@ class Coupon(Base):
     valid_until: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(
-        Text, nullable=False, default="active", server_default="'active'"
+        Text, nullable=False, default="active", server_default="active"
     )
 
     customer: Mapped["Customer"] = relationship(back_populates="coupons")
@@ -144,7 +144,7 @@ class Broadcast(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
     scheduled_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), server_default="NOW()", nullable=False
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )
     recipient_count: Mapped[int] = mapped_column(Integer, nullable=False)
     sent_count: Mapped[int] = mapped_column(
@@ -175,7 +175,7 @@ class BroadcastRecipient(Base):
         Integer, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[str] = mapped_column(
-        Text, nullable=False, default="pending", server_default="'pending'"
+        Text, nullable=False, default="pending", server_default="pending"
     )
     sent_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
