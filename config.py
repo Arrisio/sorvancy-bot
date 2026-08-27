@@ -30,3 +30,8 @@ DEEPLINK_BASE: str = os.environ.get("DEEPLINK_BASE", "")
 
 INVITE_SECRET: str = os.environ.get("INVITE_SECRET", "")
 
+# Owner's public Max profile link — target of «Связаться с продавцом» link button.
+# Format: https://max.ru/<username>, copied from Owner profile in Max client.
+# Empty → button hidden from registered_keyboard (scenario 17 N1).
+OWNER_CHAT_URL: str = os.environ.get("OWNER_CHAT_URL", "")
+

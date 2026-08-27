@@ -101,6 +101,7 @@ docker compose up -d
 | `OWNER_ID` | ID аккаунта Max Messenger владельца магазина — при первом запуске `init_db.py` создаёт запись суперпользователя | ✓ |
 | `SUPPORT_ID` | ID аккаунта Max Messenger для алертов об ошибках (трейсбек уходит в личку) | |
 | `DEEPLINK_BASE` | URL бота для ссылок в QR-кодах (`https://max.ru/botname`) | ✓ |
+| `OWNER_CHAT_URL` | Ссылка на профиль владельца в Max (`https://max.ru/username`) для кнопки «Связаться с продавцом»; пусто — кнопка скрыта | |
 | `INVITE_SECRET` | Секрет для HMAC-подписи токенов приглашения продавцов | ✓ |
 | `TZ` | Часовой пояс бота (`Asia/Yekaterinburg`) | |
 | `BROADCAST_SEND_DELAY_SECONDS` | Задержка между сообщениями рассылки в секундах (15) | |

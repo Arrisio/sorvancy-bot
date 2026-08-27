@@ -12,7 +12,6 @@ from src.keyboards import (
     superuser_keyboard,
     unregistered_keyboard,
     DISCOUNT_BTN_TEXT,
-    CONTACT_STAFF_BTN_TEXT,
 )
 from src.db.orm import Staff, Customer
 from src.db.connection import get_session_factory
@@ -130,18 +129,6 @@ async def register_start_handlers(dp):
         route: str = "registration",
     ):
         await _send_discount_qr(event.bot, event.message.sender.user_id)
-
-    @dp.message_created(F.message.body.text == CONTACT_STAFF_BTN_TEXT)
-    async def on_contact_staff(event: MessageCreated, context: MemoryContext):
-        user_id = event.message.sender.user_id
-        async with get_session_factory()() as session:
-            async with session.begin():
-                customer = await customer_model.get_by_max_id(session, user_id)
-                if customer:
-                    await customer_model.update_field(
-                        session, customer.id, last_touch=datetime.now(tz=timezone.utc)
-                    )
-        await event.message.answer("Свяжитесь с нашим магазином: TBD.")
 
 
 async def _route_start(bot, user_id: int, username: str | None, context: MemoryContext,

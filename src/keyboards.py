@@ -2,9 +2,12 @@ from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from maxapi.types import (
     CallbackButton,
     ButtonsPayload,
+    LinkButton,
     MessageButton,
     RequestContactButton,
 )
+
+import config
 
 # --- Reply keyboard button labels ---
 REGISTER_BTN_TEXT = "Зарегистрироваться и получить скидку"
@@ -34,9 +37,15 @@ def registered_keyboard(survey_completed: bool = True, survey_draft=None):
         profile_btn_text = CONTINUE_SURVEY_BTN_TEXT if survey_draft else FILL_SURVEY_BTN_TEXT
     else:
         profile_btn_text = MY_PROFILE_BTN_TEXT
+    second_row = [MessageButton(text=profile_btn_text)]
+    # Scenario 17: pure link to Owner chat, no handler. Hidden when URL not configured.
+    if config.OWNER_CHAT_URL:
+        second_row.append(
+            LinkButton(text=CONTACT_STAFF_BTN_TEXT, url=config.OWNER_CHAT_URL)
+        )
     return ButtonsPayload(buttons=[
         [MessageButton(text=DISCOUNT_BTN_TEXT)],
-        [MessageButton(text=profile_btn_text), MessageButton(text=CONTACT_STAFF_BTN_TEXT)],
+        second_row,
     ]).pack()
 
 
