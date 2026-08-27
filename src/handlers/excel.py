@@ -16,8 +16,10 @@ from src.db.orm import Staff, Customer, Child
 
 logger = logging.getLogger(__name__)
 
-_CUSTOMER_COLS = list(range(1, 10)) + [13, 14]
+_SUPPORT_COLS = [15, 16]
+_CUSTOMER_COLS = list(range(1, 10)) + [13, 14] + _SUPPORT_COLS
 _COUPON_COL = 13
+_SUPPORT_COLOR = "FF808080"
 
 
 async def register_excel_handlers(dp):
@@ -83,10 +85,14 @@ async def _generate_excel() -> bytes:
         "Последняя активность",
         "Имя ребёнка", "Пол", "Дата рождения ребёнка",
         "Активные купоны", "Заполнена анкета",
+        "Max ID", "Max username",
     ]
     ws.append(headers)
     for cell in ws[1]:
         cell.font = Font(bold=True)
+    # Support-only columns: greyed out, no business meaning
+    for col in _SUPPORT_COLS:
+        ws.cell(1, col).font = Font(bold=True, color=_SUPPORT_COLOR)
 
     row_idx = 2
 
@@ -120,19 +126,21 @@ async def _generate_excel() -> bytes:
             touch_str,
         ]
 
+        support_row = [cust.max_user_id, cust.max_username or ""]
+
         start_row = row_idx
 
         if not children:
-            ws.append(base_row + ["", "", "", coupon_cell, survey_str])
+            ws.append(base_row + ["", "", "", coupon_cell, survey_str] + support_row)
             row_idx += 1
         else:
             for i, ch in enumerate(children):
                 ch_bd = ch.birthdate.strftime("%d.%m.%Y") if ch.birthdate else ""
                 gender_str = "Мальчик" if ch.gender == "male" else "Девочка"
                 if i == 0:
-                    row = base_row + [ch.name, gender_str, ch_bd, coupon_cell, survey_str]
+                    row = base_row + [ch.name, gender_str, ch_bd, coupon_cell, survey_str] + support_row
                 else:
-                    row = [""] * 9 + [ch.name, gender_str, ch_bd, "", ""]
+                    row = [""] * 9 + [ch.name, gender_str, ch_bd, "", "", "", ""]
                 ws.append(row)
                 row_idx += 1
 
@@ -150,6 +158,11 @@ async def _generate_excel() -> bytes:
                 )
         else:
             ws.cell(start_row, _COUPON_COL).alignment = Alignment(wrap_text=True)
+
+    support_font = Font(color=_SUPPORT_COLOR)
+    for row in range(2, ws.max_row + 1):
+        for col in _SUPPORT_COLS:
+            ws.cell(row, col).font = support_font
 
     col_widths: dict[int, int] = {}
     for row in ws.iter_rows():
