@@ -29,4 +29,6 @@
 | Номер клиента | Customer identifier shown on discount card (scenario 03) and entered by staff in scenario 10. Exact field TBD — see open question in scenario 03. |
 | staff_keyboard | Persistent keyboard for Staff (`is_owner = false`, `customer_mode = false`). Button routing: `specs/ux-style-guide.md` §2.1. |
 | superuser_keyboard | Persistent keyboard for Superuser (`is_owner = true`, `customer_mode = false`). Button routing: `specs/ux-style-guide.md` §2.1. |
+| OWNER_CHAT_URL | Owner's public Max profile link (`https://max.ru/<username>`), taken from Owner's profile in Max client. Target of «Связаться с продавцом» link button (scenario 17). Not derivable from `OWNER_ID` or phone. |
+| Link button | Keyboard button carrying a URL instead of a payload. Click opens the URL in Max client; bot receives no event, so no tracking. See `specs/ux-style-guide.md` §2.3. |
 | FinancialConfig | Singleton DB entity (one row) holding all owner-editable financial parameters: registration discount %, and value/validity/max-pct for survey and birthday coupons. See `specs/entities/financial-config.md`. |

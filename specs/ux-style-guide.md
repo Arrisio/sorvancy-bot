@@ -58,7 +58,7 @@ Row 2, left button is conditional on survey state:
 |-----|--------|----------|
 | 1 | «🎁 Скидка и купоны» | → 03 Discount QR |
 | 2 | survey-conditional button (see table above) | → 02 or 05 |
-| 2 | «Связаться с продавцом» | → 17 Contact Seller |
+| 2 | «Связаться с продавцом» — link button, no handler; hidden when `OWNER_CHAT_URL` empty | → 17 Contact Seller (opens Owner chat by `OWNER_CHAT_URL`) |
 
 **Staff** (`is_owner = false`, `customer_mode = false`) — `staff_keyboard`
 
@@ -87,12 +87,16 @@ Note: Superuser registers sellers via contact card forwarding — no keyboard bu
 
 Mid-flow keyboards shown during specific scenarios. Defined in their owning scenario spec. Named in `specs/glossary.md` for cross-reference only.
 
-### 2.3 [Отмена] button
+### 2.3 Link buttons
+
+A link button carries a URL, not a payload — bot receives no event on click, so no state change and no analytics are possible from the press. Use only when the action is purely navigational and tracking is not required.
+
+### 2.4 [Отмена] button
 
 - Required on any FSM prompt awaiting free-text input
 - Not required on button-choice steps (user is not blocked — they just choose a button)
 
-### 2.4 Destructive actions
+### 2.5 Destructive actions
 
 Destructive actions (delete, reset) require explicit confirm button. Never trigger destructive action from free-text input alone.
 
